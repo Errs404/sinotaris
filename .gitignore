@@ -32,6 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# prisma client hasil generate
+/src/generated/
+
+# template & dokumen berisi data klien — jangan dipush
+/storage/
 
 # vercel
 .vercel

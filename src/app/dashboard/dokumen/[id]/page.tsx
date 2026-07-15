@@ -1,0 +1,39 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import type { TemplateFieldsDef } from "@/lib/templateFields";
+import { GeneratorForm } from "./GeneratorForm";
+
+export default async function TemplateDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const session = await auth();
+  const { id } = await params;
+
+  const template = await prisma.docTemplate.findFirst({
+    where: { id, officeId: session!.user.officeId },
+  });
+
+  if (!template) notFound();
+
+  const sections = template.fieldsJson as unknown as TemplateFieldsDef;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <Link href="/dashboard/dokumen" className="text-sm text-emerald-700 hover:underline">
+          ← Kembali ke daftar template
+        </Link>
+        <h2 className="mt-1 text-2xl font-bold text-slate-800">Buat Dokumen: {template.name}</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Isi form di bawah lalu klik Generate DOCX. Tanggal otomatis diubah jadi teks
+          terbilang Bahasa Indonesia.
+        </p>
+      </div>
+      <GeneratorForm templateId={template.id} sections={sections} />
+    </div>
+  );
+}

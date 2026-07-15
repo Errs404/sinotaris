@@ -1,0 +1,698 @@
+[
+  {
+    "title": "Akta",
+    "fields": [
+      {
+        "name": "nomor_akta",
+        "label": "Nomor Akta",
+        "type": "text",
+        "default": "202/2018"
+      },
+      {
+        "name": "lembar",
+        "label": "Lembar",
+        "type": "text",
+        "default": "Lembar Pertama"
+      },
+      {
+        "name": "tanggal_akta",
+        "label": "Tanggal Akta",
+        "type": "date",
+        "default": "2024-12-31"
+      },
+      {
+        "name": "hari_akta",
+        "label": "Hari Akta (otomatis)",
+        "type": "readonly",
+        "default": "Senin"
+      },
+      {
+        "name": "tanggal_akta_teks",
+        "label": "Tanggal Akta Teks (otomatis)",
+        "type": "readonly",
+        "default": "31 (tiga puluh satu) bulan Desember tahun 2024 (dua ribu dua puluh empat)"
+      },
+      {
+        "name": "kedudukan_sementara",
+        "label": "Keterangan Sementara Pemberi Kuasa",
+        "type": "text",
+        "default": "untuk sementara berada di Kabupaten Magelang"
+      }
+    ]
+  },
+  {
+    "title": "Notaris",
+    "fields": [
+      {
+        "name": "nama_notaris",
+        "label": "Nama Notaris",
+        "type": "text",
+        "default": "NAMA NOTARIS CONTOH"
+      },
+      {
+        "name": "gelar_notaris",
+        "label": "Gelar Notaris",
+        "type": "text",
+        "default": "Sarjana Hukum, Magister Kenotariatan"
+      },
+      {
+        "name": "sk_notaris_tanggal",
+        "label": "Tanggal SK Notaris",
+        "type": "text",
+        "default": "29 Desember 2022"
+      },
+      {
+        "name": "sk_notaris_nomor",
+        "label": "Nomor SK Notaris",
+        "type": "text",
+        "default": "AHU-00000.AH.00.00.TAHUN 0000"
+      },
+      {
+        "name": "wilayah_notaris",
+        "label": "Wilayah Kerja Notaris",
+        "type": "text",
+        "default": "Provinsi Jawa Tengah"
+      },
+      {
+        "name": "alamat_kantor_notaris",
+        "label": "Alamat Kantor Notaris",
+        "type": "text",
+        "default": "Alamat kantor notaris contoh"
+      }
+    ]
+  },
+  {
+    "title": "Pemberi Kuasa",
+    "fields": [
+      {
+        "name": "sapaan_pemberi",
+        "label": "Sapaan",
+        "type": "text",
+        "default": "Tuan",
+        "placeholder": "Contoh: Tuan / Nyonya"
+      },
+      {
+        "name": "nama_pemberi",
+        "label": "Nama",
+        "type": "text",
+        "default": "NAMA PEMBERI KUASA",
+        "placeholder": "Nama lengkap pemberi kuasa sesuai KTP"
+      },
+      {
+        "name": "tempat_lahir_pemberi",
+        "label": "Tempat Lahir",
+        "type": "text",
+        "default": "KABUPATEN CONTOH",
+        "placeholder": "Kota/kabupaten tempat lahir"
+      },
+      {
+        "name": "tanggal_lahir_pemberi",
+        "label": "Tanggal Lahir",
+        "type": "date-auto",
+        "default": "31-11-1999",
+        "textTarget": "tanggal_lahir_pemberi_teks",
+        "placeholder": "dd-mm-yyyy, contoh: 31-11-1999"
+      },
+      {
+        "name": "tanggal_lahir_pemberi_teks",
+        "label": "Tanggal Lahir Teks (otomatis)",
+        "type": "readonly",
+        "default": "tiga puluh satu November seribu sembilan ratus sembilan puluh sembilan",
+        "source": "tanggal_lahir_pemberi"
+      },
+      {
+        "name": "warga_pemberi",
+        "label": "Warga Negara",
+        "type": "text",
+        "default": "Indonesia",
+        "placeholder": "Contoh: Indonesia"
+      },
+      {
+        "name": "status_pemberi",
+        "label": "Status Kawin",
+        "type": "text",
+        "default": "Kawin",
+        "placeholder": "Contoh: Kawin / Belum Kawin / Cerai Hidup"
+      },
+      {
+        "name": "pekerjaan_pemberi",
+        "label": "Pekerjaan",
+        "type": "text",
+        "default": "Petani/Pekebun",
+        "placeholder": "Pekerjaan sesuai KTP"
+      },
+      {
+        "name": "alamat_pemberi",
+        "label": "Alamat",
+        "type": "text",
+        "default": "Alamat lengkap pemberi kuasa sesuai KTP",
+        "placeholder": "Alamat lengkap sesuai KTP"
+      },
+      {
+        "name": "nik_pemberi",
+        "label": "NIK",
+        "type": "text",
+        "default": "0000000000000000",
+        "placeholder": "16 digit NIK pemberi kuasa"
+      },
+      {
+        "name": "sebutan_pemberi",
+        "label": "Sebutan",
+        "type": "text",
+        "default": "pemberi kuasa",
+        "placeholder": "Sebutan dalam akta, contoh: pemberi kuasa"
+      }
+    ]
+  },
+  {
+    "title": "Persetujuan Pasangan",
+    "fields": [
+      {
+        "name": "relasi_pasangan",
+        "label": "Relasi",
+        "type": "text",
+        "default": "istrinya",
+        "placeholder": "Contoh: istrinya / suaminya"
+      },
+      {
+        "name": "sapaan_pasangan",
+        "label": "Sapaan Pasangan",
+        "type": "text",
+        "default": "Nyonya",
+        "placeholder": "Contoh: Tuan / Nyonya"
+      },
+      {
+        "name": "nama_pasangan",
+        "label": "Nama Pasangan",
+        "type": "text",
+        "default": "NAMA PASANGAN",
+        "placeholder": "Nama lengkap pasangan sesuai KTP"
+      },
+      {
+        "name": "tempat_lahir_pasangan",
+        "label": "Tempat Lahir Pasangan",
+        "type": "text",
+        "default": "Magelang",
+        "placeholder": "Kota/kabupaten tempat lahir pasangan"
+      },
+      {
+        "name": "tanggal_lahir_pasangan",
+        "label": "Tanggal Lahir Pasangan",
+        "type": "date-auto",
+        "default": "31-11-1999",
+        "textTarget": "tanggal_lahir_pasangan_teks",
+        "placeholder": "dd-mm-yyyy, contoh: 31-11-1999"
+      },
+      {
+        "name": "tanggal_lahir_pasangan_teks",
+        "label": "Tanggal Lahir Pasangan Teks (otomatis)",
+        "type": "readonly",
+        "default": "tiga puluh satu November seribu sembilan ratus sembilan puluh sembilan",
+        "source": "tanggal_lahir_pasangan"
+      },
+      {
+        "name": "warga_pasangan",
+        "label": "Warga Negara Pasangan",
+        "type": "text",
+        "default": "Indonesia",
+        "placeholder": "Contoh: Indonesia"
+      },
+      {
+        "name": "status_pasangan",
+        "label": "Status Pasangan",
+        "type": "text",
+        "default": "Kawin",
+        "placeholder": "Contoh: Kawin / Belum Kawin / Cerai Hidup"
+      },
+      {
+        "name": "pekerjaan_pasangan",
+        "label": "Pekerjaan Pasangan",
+        "type": "text",
+        "default": "Mengurus Rumah Tangga",
+        "placeholder": "Pekerjaan pasangan sesuai KTP"
+      },
+      {
+        "name": "alamat_pasangan",
+        "label": "Alamat Pasangan",
+        "type": "text",
+        "default": "sama dengan suaminya di atas",
+        "placeholder": "Contoh: sama dengan suaminya di atas / alamat lengkap"
+      },
+      {
+        "name": "nik_pasangan",
+        "label": "NIK Pasangan",
+        "type": "text",
+        "default": "0000000000000001",
+        "placeholder": "16 digit NIK pasangan"
+      }
+    ]
+  },
+  {
+    "title": "Penerima Kuasa / Kreditor",
+    "fields": [
+      {
+        "name": "sapaan_penerima",
+        "label": "Sapaan",
+        "type": "text",
+        "default": "Tuan"
+      },
+      {
+        "name": "nama_penerima",
+        "label": "Nama",
+        "type": "text",
+        "default": "NAMA PENERIMA KUASA"
+      },
+      {
+        "name": "tempat_lahir_penerima",
+        "label": "Tempat Lahir",
+        "type": "text",
+        "default": "Boyolali"
+      },
+      {
+        "name": "tanggal_lahir_penerima",
+        "label": "Tanggal Lahir",
+        "type": "date-auto",
+        "default": "01-02-1990",
+        "textTarget": "tanggal_lahir_penerima_teks",
+        "placeholder": "dd-mm-yyyy"
+      },
+      {
+        "name": "tanggal_lahir_penerima_teks",
+        "label": "Tanggal Lahir Teks (otomatis)",
+        "type": "readonly",
+        "default": "satu Februari seribu sembilan ratus sembilan puluh",
+        "source": "tanggal_lahir_penerima"
+      },
+      {
+        "name": "warga_penerima",
+        "label": "Warga Negara",
+        "type": "text",
+        "default": "Indonesia"
+      },
+      {
+        "name": "pekerjaan_penerima",
+        "label": "Pekerjaan",
+        "type": "text",
+        "default": "Karyawan Swasta"
+      },
+      {
+        "name": "alamat_penerima",
+        "label": "Alamat",
+        "type": "text",
+        "default": "Alamat lengkap penerima kuasa sesuai KTP"
+      },
+      {
+        "name": "nik_penerima",
+        "label": "NIK",
+        "type": "text",
+        "default": "1111111111111111"
+      },
+      {
+        "name": "nomor_sk_penerima",
+        "label": "Nomor SK/Kuasa",
+        "type": "text",
+        "default": "SK/00/CONTOH/0000"
+      },
+      {
+        "name": "tanggal_sk_penerima",
+        "label": "Tanggal SK/Kuasa",
+        "type": "text",
+        "default": "02-01-2023 (dua Januari dua ribu dua puluh tiga)"
+      },
+      {
+        "name": "nama_kreditor",
+        "label": "Nama Kreditor",
+        "type": "text",
+        "default": "NAMA KREDITOR CONTOH"
+      },
+      {
+        "name": "kedudukan_kreditor",
+        "label": "Kedudukan Kreditor",
+        "type": "text",
+        "default": "Kabupaten Boyolali"
+      },
+      {
+        "name": "akta_kreditor",
+        "label": "Data Akta Kreditor",
+        "type": "text",
+        "default": "akta pendirian/perubahan kreditor contoh"
+      },
+      {
+        "name": "pengesahan_kreditor",
+        "label": "Pengesahan Kreditor",
+        "type": "text",
+        "default": "nomor pengesahan kreditor contoh"
+      },
+      {
+        "name": "notaris_kreditor",
+        "label": "Notaris Akta Kreditor",
+        "type": "text",
+        "default": "notaris pembuat akta kreditor contoh"
+      }
+    ]
+  },
+  {
+    "title": "Debitor dan Pembiayaan",
+    "fields": [
+      {
+        "name": "sapaan_debitor",
+        "label": "Sapaan Debitor",
+        "type": "text",
+        "default": "Tuan"
+      },
+      {
+        "name": "nama_debitor",
+        "label": "Nama Debitor",
+        "type": "text",
+        "default": "NAMA DEBITOR"
+      },
+      {
+        "name": "tempat_lahir_debitor",
+        "label": "Tempat Lahir Debitor",
+        "type": "text",
+        "default": "Magelang"
+      },
+      {
+        "name": "tanggal_lahir_debitor",
+        "label": "Tanggal Lahir Debitor",
+        "type": "date-auto",
+        "default": "31-11-1992",
+        "textTarget": "tanggal_lahir_debitor_teks",
+        "placeholder": "dd-mm-yyyy"
+      },
+      {
+        "name": "tanggal_lahir_debitor_teks",
+        "label": "Tanggal Lahir Debitor Teks (otomatis)",
+        "type": "readonly",
+        "default": "tiga puluh satu November seribu sembilan ratus sembilan puluh dua",
+        "source": "tanggal_lahir_debitor"
+      },
+      {
+        "name": "warga_debitor",
+        "label": "Warga Negara Debitor",
+        "type": "text",
+        "default": "Indonesia"
+      },
+      {
+        "name": "status_debitor",
+        "label": "Status Debitor",
+        "type": "text",
+        "default": "Kawin"
+      },
+      {
+        "name": "pekerjaan_debitor",
+        "label": "Pekerjaan Debitor",
+        "type": "text",
+        "default": "Petani/Pekebun"
+      },
+      {
+        "name": "alamat_debitor",
+        "label": "Alamat Debitor",
+        "type": "text",
+        "default": "Alamat lengkap debitor sesuai KTP"
+      },
+      {
+        "name": "nik_debitor",
+        "label": "NIK Debitor",
+        "type": "text",
+        "default": "0000000000000002"
+      },
+      {
+        "name": "nilai_pembiayaan",
+        "label": "Nilai Pembiayaan",
+        "type": "text",
+        "default": "Rp.114.534.000,-"
+      },
+      {
+        "name": "nilai_pembiayaan_teks",
+        "label": "Nilai Pembiayaan (teks)",
+        "type": "text",
+        "default": "seratus empat belas juta lima ratus tiga puluh empat ribu rupiah"
+      },
+      {
+        "name": "jenis_akad",
+        "label": "Jenis Akad",
+        "type": "text",
+        "default": "Akad Pembiayaan Hawalah bil ujrah"
+      },
+      {
+        "name": "nomor_akad",
+        "label": "Nomor Akad",
+        "type": "text",
+        "default": "000/AKAD/CONTOH/0000"
+      },
+      {
+        "name": "tanggal_akad",
+        "label": "Tanggal Akad",
+        "type": "date-auto",
+        "default": "29-12-2024",
+        "textTarget": "tanggal_akad_teks",
+        "placeholder": "dd-mm-yyyy"
+      },
+      {
+        "name": "tanggal_akad_teks",
+        "label": "Tanggal Akad Teks (otomatis)",
+        "type": "readonly",
+        "default": "dua puluh sembilan Desember dua ribu dua puluh empat",
+        "source": "tanggal_akad"
+      },
+      {
+        "name": "nilai_tanggungan",
+        "label": "Nilai Tanggungan",
+        "type": "text",
+        "default": "Rp. 114.500.000,-"
+      },
+      {
+        "name": "nilai_tanggungan_teks",
+        "label": "Nilai Tanggungan (teks)",
+        "type": "text",
+        "default": "seratus empat belas juta lima ratus tiga puluh rupiah"
+      }
+    ]
+  },
+  {
+    "title": "Objek Hak Tanggungan",
+    "fields": [
+      {
+        "name": "jumlah_objek",
+        "label": "Jumlah Objek",
+        "type": "text",
+        "default": "1 (satu)",
+        "placeholder": "Contoh: 1 (satu)"
+      },
+      {
+        "name": "jenis_hak",
+        "label": "Jenis Hak",
+        "type": "text",
+        "default": "Hak Milik",
+        "placeholder": "Contoh: Hak Milik / Hak Guna Bangunan"
+      },
+      {
+        "name": "nomor_hak",
+        "label": "Nomor Hak",
+        "type": "text",
+        "default": "00000/DESA-CONTOH",
+        "placeholder": "Nomor sertipikat, contoh: 00000/DESA-CONTOH"
+      },
+      {
+        "name": "tanggal_surat_ukur",
+        "label": "Tanggal Surat Ukur",
+        "type": "date-auto",
+        "default": "29-12-2024",
+        "textTarget": "tanggal_surat_ukur_teks",
+        "placeholder": "dd-mm-yyyy, contoh: 29-12-2024"
+      },
+      {
+        "name": "tanggal_surat_ukur_teks",
+        "label": "Tanggal Surat Ukur Teks (otomatis)",
+        "type": "readonly",
+        "default": "dua puluh sembilan Desember dua ribu dua puluh empat",
+        "source": "tanggal_surat_ukur"
+      },
+      {
+        "name": "nomor_surat_ukur",
+        "label": "Nomor Surat Ukur",
+        "type": "text",
+        "default": "00000/DESA-CONTOH/0000",
+        "placeholder": "Nomor surat ukur/Gambar Situasi"
+      },
+      {
+        "name": "luas_tanah",
+        "label": "Luas Tanah",
+        "type": "text",
+        "default": "1.153 M2",
+        "placeholder": "Luas angka, contoh: 1.153 M2"
+      },
+      {
+        "name": "luas_tanah_teks",
+        "label": "Luas Tanah (teks)",
+        "type": "text",
+        "default": "seribu seratus lima puluh tiga meter persegi",
+        "placeholder": "Luas tanah dalam huruf"
+      },
+      {
+        "name": "nib",
+        "label": "NIB",
+        "type": "text",
+        "default": "00.00.00.00.00000",
+        "placeholder": "Nomor Identifikasi Bidang Tanah"
+      },
+      {
+        "name": "nop",
+        "label": "NOP",
+        "type": "text",
+        "default": "00.00.000.000.000-0000.0",
+        "placeholder": "Nomor Objek Pajak/SPPT PBB"
+      },
+      {
+        "name": "provinsi_objek",
+        "label": "Provinsi",
+        "type": "text",
+        "default": "PROVINSI CONTOH",
+        "placeholder": "Provinsi letak objek"
+      },
+      {
+        "name": "kabupaten_objek",
+        "label": "Kabupaten",
+        "type": "text",
+        "default": "Magelang",
+        "placeholder": "Kabupaten/kota letak objek"
+      },
+      {
+        "name": "kecamatan_objek",
+        "label": "Kecamatan",
+        "type": "text",
+        "default": "KECAMATAN CONTOH",
+        "placeholder": "Kecamatan letak objek"
+      },
+      {
+        "name": "desa_objek",
+        "label": "Desa",
+        "type": "text",
+        "default": "DESA CONTOH",
+        "placeholder": "Desa/kelurahan letak objek"
+      },
+      {
+        "name": "jalan_objek",
+        "label": "Jalan",
+        "type": "text",
+        "default": "Jalan/RT contoh",
+        "placeholder": "Jalan/dusun/RT letak objek"
+      },
+      {
+        "name": "rw_objek",
+        "label": "Rukun Warga",
+        "type": "text",
+        "default": "06",
+        "placeholder": "RW letak objek"
+      }
+    ]
+  },
+  {
+    "title": "Saksi dan Tanda Tangan",
+    "fields": [
+      {
+        "name": "nama_saksi_1",
+        "label": "Nama Saksi 1",
+        "type": "text",
+        "default": "NAMA SAKSI SATU"
+      },
+      {
+        "name": "tempat_lahir_saksi_1",
+        "label": "Tempat Lahir Saksi 1",
+        "type": "text",
+        "default": "Magelang"
+      },
+      {
+        "name": "tanggal_lahir_saksi_1",
+        "label": "Tanggal Lahir Saksi 1",
+        "type": "date-auto",
+        "default": "07-11-1976",
+        "textTarget": "tanggal_lahir_saksi_1_teks",
+        "placeholder": "dd-mm-yyyy"
+      },
+      {
+        "name": "tanggal_lahir_saksi_1_teks",
+        "label": "Tanggal Lahir Saksi 1 Teks (otomatis)",
+        "type": "readonly",
+        "default": "tujuh November seribu sembilan ratus tujuh puluh enam",
+        "source": "tanggal_lahir_saksi_1"
+      },
+      {
+        "name": "alamat_saksi_1",
+        "label": "Alamat Saksi 1",
+        "type": "text",
+        "default": "Alamat lengkap saksi satu sesuai KTP"
+      },
+      {
+        "name": "nik_saksi_1",
+        "label": "NIK Saksi 1",
+        "type": "text",
+        "default": "2222222222222222"
+      },
+      {
+        "name": "nama_saksi_2",
+        "label": "Nama Saksi 2",
+        "type": "text",
+        "default": "NAMA SAKSI DUA"
+      },
+      {
+        "name": "tempat_lahir_saksi_2",
+        "label": "Tempat Lahir Saksi 2",
+        "type": "text",
+        "default": "Magelang"
+      },
+      {
+        "name": "tanggal_lahir_saksi_2",
+        "label": "Tanggal Lahir Saksi 2",
+        "type": "date-auto",
+        "default": "18-06-1998",
+        "textTarget": "tanggal_lahir_saksi_2_teks",
+        "placeholder": "dd-mm-yyyy"
+      },
+      {
+        "name": "tanggal_lahir_saksi_2_teks",
+        "label": "Tanggal Lahir Saksi 2 Teks (otomatis)",
+        "type": "readonly",
+        "default": "delapan belas Juni seribu sembilan ratus sembilan puluh delapan",
+        "source": "tanggal_lahir_saksi_2"
+      },
+      {
+        "name": "alamat_saksi_2",
+        "label": "Alamat Saksi 2",
+        "type": "text",
+        "default": "Alamat lengkap saksi dua sesuai KTP"
+      },
+      {
+        "name": "nik_saksi_2",
+        "label": "NIK Saksi 2",
+        "type": "text",
+        "default": "3333333333333333"
+      },
+      {
+        "name": "ttd_pemberi",
+        "label": "Nama TTD Pemberi",
+        "type": "text",
+        "default": "NAMA TTD PEMBERI"
+      },
+      {
+        "name": "ttd_penerima",
+        "label": "Nama TTD Penerima",
+        "type": "text",
+        "default": "NAMA TTD PENERIMA"
+      },
+      {
+        "name": "ttd_pasangan",
+        "label": "Label TTD Pasangan",
+        "type": "text",
+        "default": "Persetujuan Istri"
+      },
+      {
+        "name": "ttd_notaris",
+        "label": "Nama TTD Notaris",
+        "type": "text",
+        "default": "NAMA NOTARIS, S.H., M.Kn."
+      }
+    ]
+  }
+]

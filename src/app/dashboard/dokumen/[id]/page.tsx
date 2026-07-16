@@ -24,7 +24,7 @@ export default async function TemplateDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/dashboard/dokumen" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/dashboard/dokumen" className="text-sm text-indigo-700 hover:underline">
           ← Kembali ke daftar template
         </Link>
         <h2 className="mt-1 text-2xl font-bold text-slate-800">Buat Dokumen: {template.name}</h2>

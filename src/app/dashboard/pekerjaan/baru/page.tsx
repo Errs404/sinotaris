@@ -14,7 +14,7 @@ export default async function PekerjaanBaruPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/dashboard/pekerjaan" className="text-sm text-emerald-700 hover:underline">
+        <Link href="/dashboard/pekerjaan" className="text-sm text-indigo-700 hover:underline">
           ← Kembali ke daftar pekerjaan
         </Link>
         <h2 className="mt-1 text-2xl font-bold text-slate-800">Tambah Pekerjaan</h2>

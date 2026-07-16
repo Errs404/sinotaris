@@ -33,7 +33,7 @@ export default async function KlienPage({
         <h2 className="text-2xl font-bold text-slate-800">Klien</h2>
         <Link
           href="/dashboard/klien/baru"
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
         >
           + Tambah Klien
         </Link>
@@ -45,17 +45,17 @@ export default async function KlienPage({
           name="q"
           defaultValue={q ?? ""}
           placeholder="Cari nama, NIK, atau telepon..."
-          className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="w-full max-w-md rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
         <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
           Cari
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
+            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700">
               <th className="px-4 py-3 font-medium">Nama</th>
               <th className="px-4 py-3 font-medium">Tipe</th>
               <th className="px-4 py-3 font-medium">NIK</th>
@@ -73,7 +73,7 @@ export default async function KlienPage({
               </tr>
             )}
             {clients.map((client) => (
-              <tr key={client.id} className="border-b border-slate-100 hover:bg-slate-50">
+              <tr key={client.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60">
                 <td className="px-4 py-3 font-medium text-slate-800">{client.name}</td>
                 <td className="px-4 py-3">
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">
@@ -86,7 +86,7 @@ export default async function KlienPage({
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/dashboard/klien/${client.id}`}
-                    className="font-medium text-emerald-700 hover:underline"
+                    className="font-medium text-indigo-700 hover:underline"
                   >
                     Detail
                   </Link>

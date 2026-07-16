@@ -22,7 +22,7 @@ export default async function PengaturanPage() {
         <div className="flex flex-wrap items-center gap-4">
           <span
             className={`rounded-full px-3 py-1 text-sm font-semibold ${
-              subscription.active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+              subscription.active ? "bg-indigo-100 text-indigo-700" : "bg-red-100 text-red-700"
             }`}
           >
             {subscription.active ? "Aktif" : "Tidak Aktif"}

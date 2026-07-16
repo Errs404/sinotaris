@@ -18,7 +18,7 @@ export function ComingSoon({
         <ul className="mt-4 space-y-2 text-sm text-slate-500">
           {items.map((item) => (
             <li key={item} className="flex items-start gap-2">
-              <span className="mt-0.5 text-emerald-600">✓</span>
+              <span className="mt-0.5 text-indigo-600">✓</span>
               {item}
             </li>
           ))}

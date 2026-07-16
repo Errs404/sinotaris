@@ -33,7 +33,7 @@ export default async function DokumenPage() {
           <div className="space-y-3">
             <input name="name" required placeholder="Nama template, contoh: Akta Sewa" className={inputClass} />
             <input name="file" type="file" accept=".docx" required className={inputClass} />
-            <button className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">
+            <button className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
               Upload Template
             </button>
           </div>
@@ -46,7 +46,7 @@ export default async function DokumenPage() {
             tanggal otomatis jadi teks terbilang, dan penyesuaian garis putus-putus.
           </p>
           {hasSkmht ? (
-            <p className="text-sm font-medium text-emerald-700">✓ Sudah diimpor</p>
+            <p className="text-sm font-medium text-indigo-700">✓ Sudah diimpor</p>
           ) : (
             <form action={importSkmhtAction}>
               <button className="rounded-lg bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-700">
@@ -57,10 +57,10 @@ export default async function DokumenPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
+            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700">
               <th className="px-4 py-3 font-medium">Template</th>
               <th className="px-4 py-3 font-medium">Jumlah Field</th>
               <th className="px-4 py-3 font-medium">Dokumen Dibuat</th>
@@ -81,7 +81,7 @@ export default async function DokumenPage() {
               const fieldCount = sections.reduce((n, s) => n + s.fields.length, 0);
               const remove = deleteTemplateAction.bind(null, template.id);
               return (
-                <tr key={template.id} className="border-b border-slate-100 hover:bg-slate-50">
+                <tr key={template.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60">
                   <td className="px-4 py-3 font-medium text-slate-800">{template.name}</td>
                   <td className="px-4 py-3 text-slate-600">{fieldCount}</td>
                   <td className="px-4 py-3 text-slate-600">{template._count.documents}</td>
@@ -92,7 +92,7 @@ export default async function DokumenPage() {
                     <div className="flex justify-end gap-4">
                       <Link
                         href={`/dashboard/dokumen/${template.id}`}
-                        className="font-medium text-emerald-700 hover:underline"
+                        className="font-medium text-indigo-700 hover:underline"
                       >
                         Buat Dokumen
                       </Link>

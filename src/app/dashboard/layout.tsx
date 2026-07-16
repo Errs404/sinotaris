@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth, signOut } from "@/auth";
 import { getSubscriptionState } from "@/lib/subscription";
+import { SidebarNav } from "@/components/SidebarNav";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -26,26 +26,19 @@ export default async function DashboardLayout({
   const subscription = await getSubscriptionState(session.user.officeId);
 
   return (
-    <div className="flex min-h-screen bg-slate-100">
-      <aside className="hidden w-64 flex-col bg-slate-900 text-slate-100 md:flex">
-        <div className="border-b border-slate-700 px-6 py-5">
-          <h1 className="text-xl font-bold text-emerald-400">Sinotaris</h1>
-          <p className="mt-0.5 text-xs text-slate-400">Notaris &amp; PPAT</p>
+    <div className="flex min-h-screen bg-gradient-to-br from-indigo-50 via-slate-50 to-indigo-100">
+      <aside className="hidden w-64 flex-col border-r border-indigo-100 bg-white/90 backdrop-blur md:flex">
+        <div className="border-b border-indigo-100 px-6 py-5">
+          <h1 className="text-xl font-extrabold tracking-tight text-indigo-700">
+            Sinotaris
+          </h1>
+          <p className="mt-0.5 text-xs font-medium text-slate-400">
+            Notaris &amp; PPAT
+          </p>
         </div>
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-slate-800"
-            >
-              <span>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="border-t border-slate-700 px-6 py-4 text-xs text-slate-400">
-          <p className="font-medium text-slate-200">{session.user.name}</p>
+        <SidebarNav items={navItems} />
+        <div className="border-t border-indigo-100 px-6 py-4 text-xs text-slate-500">
+          <p className="font-semibold text-slate-700">{session.user.name}</p>
           <p>{session.user.role === "NOTARIS" ? "Notaris (Admin)" : "Staf"}</p>
           <form
             action={async () => {
@@ -54,7 +47,7 @@ export default async function DashboardLayout({
             }}
             className="mt-3"
           >
-            <button className="rounded-md bg-slate-800 px-3 py-1.5 text-slate-200 hover:bg-slate-700">
+            <button className="rounded-md border border-indigo-200 px-3 py-1.5 font-medium text-indigo-700 hover:bg-indigo-50">
               Keluar
             </button>
           </form>

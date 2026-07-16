@@ -58,7 +58,7 @@ export default async function PengingatPage() {
             <option value="LAINNYA">Lainnya</option>
           </select>
         </div>
-        <button className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">
+        <button className="rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">
           + Tambah
         </button>
       </form>
@@ -85,8 +85,8 @@ export default async function PengingatPage() {
                   title={reminder.done ? "Tandai belum selesai" : "Tandai selesai"}
                   className={`flex h-6 w-6 items-center justify-center rounded-full border-2 text-xs font-bold ${
                     reminder.done
-                      ? "border-emerald-600 bg-emerald-600 text-white"
-                      : "border-slate-300 text-transparent hover:border-emerald-500"
+                      ? "border-indigo-600 bg-indigo-600 text-white"
+                      : "border-slate-300 text-transparent hover:border-indigo-500"
                   }`}
                 >
                   ✓

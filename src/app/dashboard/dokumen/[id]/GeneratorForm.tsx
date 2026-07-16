@@ -5,7 +5,7 @@ import type { TemplateFieldsDef } from "@/lib/templateFields";
 import { formatIndonesianDateText, formatAktaDate, formatDisplayDate } from "@/lib/indoDate";
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500";
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
 
 export function GeneratorForm({
   templateId,
@@ -133,7 +133,7 @@ export function GeneratorForm({
       <button
         type="submit"
         disabled={busy}
-        className="rounded-lg bg-emerald-600 px-6 py-3 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+        className="rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
       >
         {busy ? "Membuat dokumen..." : "Generate DOCX"}
       </button>

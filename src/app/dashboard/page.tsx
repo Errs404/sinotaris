@@ -48,23 +48,30 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-xl bg-white p-5 shadow-sm">
-            <p className="text-sm text-slate-500">{stat.label}</p>
-            <p className="mt-1 text-3xl font-bold text-slate-800">{stat.value}</p>
+          <div
+            key={stat.label}
+            className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {stat.label}
+            </p>
+            <p className="mt-1 text-3xl font-extrabold text-indigo-700">{stat.value}</p>
           </div>
         ))}
       </div>
 
       {isNotaris && (
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <p className="text-sm text-slate-500">Honorarium Bulan Ini</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-700">
+        <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-600 to-violet-600 p-5 shadow-lg shadow-indigo-200">
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">
+            Honorarium Bulan Ini
+          </p>
+          <p className="mt-1 text-3xl font-extrabold text-white">
             {formatRupiah(Number(honorBulanIni?._sum.honorarium ?? 0))}
           </p>
         </div>
       )}
 
-      <div className="rounded-xl bg-white p-5 shadow-sm">
+      <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50">
         <h3 className="mb-3 font-semibold text-slate-800">Pengingat Terdekat</h3>
         {pengingatAktif.length === 0 ? (
           <p className="text-sm text-slate-500">Tidak ada pengingat aktif.</p>

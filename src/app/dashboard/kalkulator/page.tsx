@@ -46,7 +46,7 @@ export default function KalkulatorPage() {
               value={hargaNum ? hargaNum.toLocaleString("id-ID") : ""}
               onChange={(e) => setHarga(e.target.value)}
               placeholder="500.000.000"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -58,7 +58,7 @@ export default function KalkulatorPage() {
               inputMode="numeric"
               value={parseRupiah(npoptkp) ? parseRupiah(npoptkp).toLocaleString("id-ID") : ""}
               onChange={(e) => setNpoptkp(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
@@ -75,7 +75,7 @@ export default function KalkulatorPage() {
           ))}
           <div className="flex items-center justify-between pt-1">
             <span className="font-semibold text-slate-800">Total Perkiraan</span>
-            <span className="text-xl font-bold text-emerald-700">{formatRupiah(result.total)}</span>
+            <span className="text-xl font-bold text-indigo-700">{formatRupiah(result.total)}</span>
           </div>
         </div>
         <p className="mt-4 text-xs text-slate-400">

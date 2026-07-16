@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { PekerjaanForm } from "../PekerjaanForm";
 import { updatePekerjaanAction, deletePekerjaanAction } from "../actions";
+import { PekerjaanDetailClient } from "./PekerjaanDetailClient";
 
 export default async function PekerjaanDetailPage({
   params,
@@ -23,26 +22,11 @@ export default async function PekerjaanDetailPage({
   const deleteWithId = deletePekerjaanAction.bind(null, pekerjaan.id);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link href="/dashboard/pekerjaan" className="text-sm text-indigo-700 hover:underline">
-            ← Kembali ke daftar pekerjaan
-          </Link>
-          <h2 className="mt-1 text-2xl font-bold text-slate-800">{pekerjaan.judul}</h2>
-        </div>
-        <form action={deleteWithId}>
-          <button className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">
-            Hapus Pekerjaan
-          </button>
-        </form>
-      </div>
-      <PekerjaanForm
-        action={updateWithId}
-        pekerjaan={pekerjaan}
-        isNotaris={session!.user.role === "NOTARIS"}
-        submitLabel="Simpan Perubahan"
-      />
-    </div>
+    <PekerjaanDetailClient
+      pekerjaan={JSON.parse(JSON.stringify(pekerjaan))}
+      isNotaris={session!.user.role === "NOTARIS"}
+      updateAction={updateWithId}
+      deleteAction={deleteWithId}
+    />
   );
 }

@@ -1,16 +1,18 @@
-import Link from "next/link";
+import { Breadcrumb } from "@/components/Breadcrumb";
 import { KlienForm } from "../KlienForm";
 import { createClientAction } from "../actions";
 
 export default function KlienBaruPage() {
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/dashboard/klien" className="text-sm text-indigo-700 hover:underline">
-          ← Kembali ke daftar klien
-        </Link>
-        <h2 className="mt-1 text-2xl font-bold text-slate-800">Tambah Klien</h2>
-      </div>
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Klien", href: "/dashboard/klien" },
+          { label: "Tambah Klien" },
+        ]}
+      />
+      <h2 className="text-2xl font-bold text-slate-800">Tambah Klien</h2>
       <KlienForm action={createClientAction} submitLabel="Simpan Klien" />
     </div>
   );

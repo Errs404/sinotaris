@@ -10,9 +10,11 @@ const inputClass =
 export function GeneratorForm({
   templateId,
   sections,
+  jobs,
 }: {
   templateId: string;
   sections: TemplateFieldsDef;
+  jobs: Array<{ id: string; label: string; values: Record<string, string> }>;
 }) {
   // State semua nilai field, diawali default
   const initial = useMemo(() => {
@@ -28,6 +30,37 @@ export function GeneratorForm({
   const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [pekerjaanId, setPekerjaanId] = useState("");
+
+  function applyAutomaticValues(source: Record<string, string>) {
+    const next = { ...source };
+    for (const section of sections) {
+      for (const field of section.fields) {
+        if (field.type === "date-auto" && field.textTarget && next[field.name]) {
+          next[field.textTarget] = formatIndonesianDateText(next[field.name]);
+        }
+      }
+    }
+    if (next.tanggal_akta) {
+      const akta = formatAktaDate(next.tanggal_akta);
+      if ("hari_akta" in next) next.hari_akta = akta.hari;
+      if ("tanggal_akta_teks" in next) next.tanggal_akta_teks = akta.teks;
+    } else {
+      if ("hari_akta" in next) next.hari_akta = "";
+      if ("tanggal_akta_teks" in next) next.tanggal_akta_teks = "";
+    }
+    return next;
+  }
+
+  function selectJob(id: string) {
+    setPekerjaanId(id);
+    const job = jobs.find((item) => item.id === id);
+    if (!job) {
+      setValues(initial);
+      return;
+    }
+    setValues(applyAutomaticValues({ ...initial, ...job.values }));
+  }
 
   function setValue(name: string, value: string) {
     setValues((prev) => {
@@ -73,7 +106,7 @@ export function GeneratorForm({
       const res = await fetch(`/api/dokumen/${templateId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, __pekerjaanId: pekerjaanId }),
       });
 
       if (!res.ok) {
@@ -102,6 +135,23 @@ export function GeneratorForm({
 
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5 dark:border-indigo-800 dark:bg-indigo-950/30">
+        <label htmlFor="pekerjaan" className="mb-1 block text-sm font-semibold text-indigo-900 dark:text-indigo-200">
+          Ambil data dari pekerjaan
+        </label>
+        <p className="mb-3 text-xs text-indigo-700 dark:text-indigo-300">
+          Opsional. Memilih pekerjaan akan mengisi data akta, kantor, pajak, dan para pihak secara otomatis.
+        </p>
+        <select
+          id="pekerjaan"
+          value={pekerjaanId}
+          onChange={(event) => selectJob(event.target.value)}
+          className="w-full rounded-lg border border-indigo-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+        >
+          <option value="">— Pilih pekerjaan —</option>
+          {jobs.map((job) => <option key={job.id} value={job.id}>{job.label}</option>)}
+        </select>
+      </div>
       {sections.map((section) => (
         <div key={section.title} className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
           <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">{section.title}</h3>

@@ -24,12 +24,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("sinotaris-theme") as Theme | null;
-    const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const initial = saved ?? preferred;
-    setTheme(initial);
-    document.documentElement.classList.toggle("dark", initial === "dark");
-    setMounted(true);
+    const timer = window.setTimeout(() => {
+      const saved = localStorage.getItem("sinotaris-theme") as Theme | null;
+      const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      const initial = saved ?? preferred;
+      setTheme(initial);
+      document.documentElement.classList.toggle("dark", initial === "dark");
+      setMounted(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const toggle = useCallback(() => {

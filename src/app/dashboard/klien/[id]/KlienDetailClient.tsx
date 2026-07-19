@@ -7,6 +7,8 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { Avatar } from "@/components/Avatar";
 import { KlienForm } from "../KlienForm";
+import Link from "next/link";
+import { Briefcase } from "lucide-react";
 
 type ClientData = {
   id: string;
@@ -30,10 +32,19 @@ export function KlienDetailClient({
   client,
   updateAction,
   deleteAction,
+  history,
 }: {
   client: ClientData;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: () => Promise<void>;
+  history: Array<{
+    id: string;
+    judul: string;
+    jenis: string;
+    status: string;
+    peran: string;
+    tanggalAkta: string | null;
+  }>;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -73,6 +84,41 @@ export function KlienDetailClient({
         >
           Hapus Klien
         </button>
+      </div>
+
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <div className="mb-4 flex items-center gap-2">
+          <Briefcase className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">
+            Riwayat Pekerjaan
+          </h3>
+        </div>
+        {history.length === 0 ? (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Klien ini belum terhubung ke pekerjaan apa pun.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {history.map((item) => (
+              <Link
+                key={`${item.id}-${item.peran}`}
+                href={`/dashboard/pekerjaan/${item.id}`}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-3 hover:bg-indigo-50 dark:border-slate-700 dark:hover:bg-slate-700/60"
+              >
+                <div>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">{item.judul}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {item.jenis} · Peran: {item.peran}
+                  </p>
+                </div>
+                <div className="text-right text-xs text-slate-500 dark:text-slate-400">
+                  <p>{item.status.replaceAll("_", " ")}</p>
+                  <p>{item.tanggalAkta ? new Date(item.tanggalAkta).toLocaleDateString("id-ID") : "Belum bernomor"}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
       <KlienForm action={handleUpdate} client={client} submitLabel="Simpan Perubahan" />
       <ConfirmDialog

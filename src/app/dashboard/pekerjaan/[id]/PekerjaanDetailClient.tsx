@@ -6,17 +6,20 @@ import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { PekerjaanForm } from "../PekerjaanForm";
+import type { ClientOption } from "../PihakEditor";
 
 export function PekerjaanDetailClient({
   pekerjaan,
   isNotaris,
   updateAction,
   deleteAction,
+  clients,
 }: {
   pekerjaan: Record<string, unknown> & { id: string; judul: string };
   isNotaris: boolean;
   updateAction: (formData: FormData) => Promise<void>;
   deleteAction: () => Promise<void>;
+  clients: ClientOption[];
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -56,6 +59,13 @@ export function PekerjaanDetailClient({
         pekerjaan={pekerjaan}
         isNotaris={isNotaris}
         submitLabel="Simpan Perubahan"
+        clients={clients}
+        parties={Array.isArray(pekerjaan.clients)
+          ? (pekerjaan.clients as Array<{ clientId: string; peran: string }>).map((party) => ({
+              clientId: party.clientId,
+              peran: party.peran,
+            }))
+          : []}
       />
       <ConfirmDialog
         open={showDelete}

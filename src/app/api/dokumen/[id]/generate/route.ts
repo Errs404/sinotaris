@@ -24,7 +24,16 @@ export async function POST(
     if (!template) return new NextResponse("Template tidak ditemukan.", { status: 404 });
 
     const body = (await request.json()) as Record<string, string>;
+    const pekerjaanId = String(body.__pekerjaanId ?? "").trim() || null;
     const sections = template.fieldsJson as unknown as TemplateFieldsDef;
+
+    if (pekerjaanId) {
+      const ownedJob = await prisma.pekerjaan.findFirst({
+        where: { id: pekerjaanId, officeId: session.user.officeId },
+        select: { id: true },
+      });
+      if (!ownedJob) return new NextResponse("Pekerjaan tidak ditemukan.", { status: 404 });
+    }
 
     // Server-side: hitung ulang semua field otomatis (jangan percaya client)
     const data: Record<string, string> = {};
@@ -63,6 +72,7 @@ export async function POST(
     await prisma.generatedDoc.create({
       data: {
         templateId: template.id,
+        pekerjaanId,
         fileName,
         dataJson: data,
       },

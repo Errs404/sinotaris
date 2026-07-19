@@ -1,11 +1,12 @@
 import { Field, SelectField, TextArea, SubmitButton } from "@/components/form";
+import { PihakEditor, type ClientOption, type PihakValue } from "./PihakEditor";
 
 type PekerjaanLike = {
   kind?: string | null;
   jenis?: string | null;
   judul?: string | null;
   nomorAkta?: string | null;
-  tanggalAkta?: Date | null;
+  tanggalAkta?: Date | string | null;
   status?: string | null;
   keterangan?: string | null;
   bentukHukum?: string | null;
@@ -28,14 +29,20 @@ export function PekerjaanForm({
   defaultKind = "NOTARIS",
   isNotaris,
   submitLabel,
+  clients,
+  parties,
 }: {
   action: (formData: FormData) => Promise<void>;
   pekerjaan?: PekerjaanLike;
   defaultKind?: string;
   isNotaris: boolean;
   submitLabel: string;
+  clients: ClientOption[];
+  parties?: PihakValue[];
 }) {
-  const tanggalAkta = pekerjaan?.tanggalAkta ? pekerjaan.tanggalAkta.toISOString().slice(0, 10) : "";
+  const tanggalAkta = pekerjaan?.tanggalAkta
+    ? new Date(pekerjaan.tanggalAkta).toISOString().slice(0, 10)
+    : "";
 
   return (
     <form action={action} className="max-w-3xl space-y-6">
@@ -86,6 +93,8 @@ export function PekerjaanForm({
           <TextArea label="Keterangan" name="keterangan" defaultValue={pekerjaan?.keterangan} rows={2} />
         </div>
       </div>
+
+      <PihakEditor clients={clients} initialValues={parties} />
 
       <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <h3 className="mb-1 font-semibold text-slate-800 dark:text-slate-100">Data Laporan PPAT</h3>

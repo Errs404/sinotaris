@@ -14,9 +14,22 @@ export default async function PekerjaanDetailPage({
 
   const pekerjaan = await prisma.pekerjaan.findFirst({
     where: { id, officeId: session!.user.officeId },
+    include: {
+      clients: {
+        where: { client: { officeId: session!.user.officeId } },
+        select: { clientId: true, peran: true },
+        orderBy: { peran: "asc" },
+      },
+    },
   });
 
   if (!pekerjaan) notFound();
+
+  const clients = await prisma.client.findMany({
+    where: { officeId: session!.user.officeId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, nik: true },
+  });
 
   const updateWithId = updatePekerjaanAction.bind(null, pekerjaan.id);
   const deleteWithId = deletePekerjaanAction.bind(null, pekerjaan.id);
@@ -27,6 +40,7 @@ export default async function PekerjaanDetailPage({
       isNotaris={session!.user.role === "NOTARIS"}
       updateAction={updateWithId}
       deleteAction={deleteWithId}
+      clients={clients}
     />
   );
 }

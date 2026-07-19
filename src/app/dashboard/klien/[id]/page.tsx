@@ -14,6 +14,13 @@ export default async function KlienDetailPage({
 
   const client = await prisma.client.findFirst({
     where: { id, officeId: session!.user.officeId },
+    include: {
+      pekerjaanList: {
+        where: { pekerjaan: { officeId: session!.user.officeId } },
+        include: { pekerjaan: true },
+        orderBy: { pekerjaan: { updatedAt: "desc" } },
+      },
+    },
   });
 
   if (!client) notFound();
@@ -21,5 +28,19 @@ export default async function KlienDetailPage({
   const updateWithId = updateClientAction.bind(null, client.id);
   const deleteWithId = deleteClientAction.bind(null, client.id);
 
-  return <KlienDetailClient client={client} updateAction={updateWithId} deleteAction={deleteWithId} />;
+  return (
+    <KlienDetailClient
+      client={client}
+      history={client.pekerjaanList.map((item) => ({
+        id: item.pekerjaan.id,
+        judul: item.pekerjaan.judul,
+        jenis: item.pekerjaan.jenis,
+        status: item.pekerjaan.status,
+        peran: item.peran,
+        tanggalAkta: item.pekerjaan.tanggalAkta?.toISOString() ?? null,
+      }))}
+      updateAction={updateWithId}
+      deleteAction={deleteWithId}
+    />
+  );
 }

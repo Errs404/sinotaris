@@ -103,12 +103,12 @@ export function GeneratorForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl space-y-6">
       {sections.map((section) => (
-        <div key={section.title} className="rounded-xl bg-white p-6 shadow-sm">
-          <h3 className="mb-4 font-semibold text-slate-800">{section.title}</h3>
+        <div key={section.title} className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+          <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">{section.title}</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             {section.fields.map((field) => (
               <div key={field.name} className={field.type === "readonly" ? "sm:col-span-2" : ""}>
-                <label htmlFor={field.name} className="mb-1 block text-sm font-medium text-slate-700">
+                <label htmlFor={field.name} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
                   {field.label}
                 </label>
                 <input
@@ -118,7 +118,7 @@ export function GeneratorForm({
                   readOnly={field.type === "readonly"}
                   onChange={(e) => setValue(field.name, e.target.value)}
                   placeholder={field.placeholder}
-                  className={`${inputClass} ${field.type === "readonly" ? "bg-slate-50 text-slate-500" : ""}`}
+                  className={`${inputClass} ${field.type === "readonly" ? "bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-400" : ""}`}
                 />
               </div>
             ))}

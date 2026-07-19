@@ -18,16 +18,16 @@ export default async function DokumenPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Generator Dokumen</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Generator Dokumen</h2>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <form
           action={uploadTemplateAction}
-          className="rounded-xl bg-white p-5 shadow-sm"
+          className="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-800"
         >
-          <h3 className="mb-1 font-semibold text-slate-800">Upload Template Word</h3>
-          <p className="mb-4 text-xs text-slate-500">
-            File .docx dengan placeholder <code className="rounded bg-slate-100 px-1">{"{nama_field}"}</code>.
+          <h3 className="mb-1 font-semibold text-slate-800 dark:text-slate-100">Upload Template Word</h3>
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
+            File .docx dengan placeholder <code className="rounded bg-slate-100 px-1 dark:bg-slate-700">{"{nama_field}"}</code>.
             Form input dibuat otomatis dari placeholder yang ditemukan.
           </p>
           <div className="space-y-3">
@@ -39,9 +39,9 @@ export default async function DokumenPage() {
           </div>
         </form>
 
-        <div className="rounded-xl bg-white p-5 shadow-sm">
-          <h3 className="mb-1 font-semibold text-slate-800">Template SKMHT Bawaan</h3>
-          <p className="mb-4 text-xs text-slate-500">
+        <div className="rounded-xl bg-white p-5 shadow-sm dark:bg-slate-800">
+          <h3 className="mb-1 font-semibold text-slate-800 dark:text-slate-100">Template SKMHT Bawaan</h3>
+          <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
             Template SKMHT lengkap dari aplikasi SKMHT Generator: 8 section, 100 field,
             tanggal otomatis jadi teks terbilang, dan penyesuaian garis putus-putus.
           </p>
@@ -57,10 +57,10 @@ export default async function DokumenPage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50">
+      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700">
+            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:bg-slate-700 dark:text-indigo-300">
               <th className="px-4 py-3 font-medium">Template</th>
               <th className="px-4 py-3 font-medium">Jumlah Field</th>
               <th className="px-4 py-3 font-medium">Dokumen Dibuat</th>
@@ -81,18 +81,18 @@ export default async function DokumenPage() {
               const fieldCount = sections.reduce((n, s) => n + s.fields.length, 0);
               const remove = deleteTemplateAction.bind(null, template.id);
               return (
-                <tr key={template.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60">
-                  <td className="px-4 py-3 font-medium text-slate-800">{template.name}</td>
-                  <td className="px-4 py-3 text-slate-600">{fieldCount}</td>
-                  <td className="px-4 py-3 text-slate-600">{template._count.documents}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                <tr key={template.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60 dark:border-slate-700 dark:hover:bg-slate-700/50">
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{template.name}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{fieldCount}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{template._count.documents}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {template.createdAt.toLocaleDateString("id-ID")}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-4">
                       <Link
                         href={`/dashboard/dokumen/${template.id}`}
-                        className="font-medium text-indigo-700 hover:underline"
+                        className="font-medium text-indigo-700 hover:underline dark:text-indigo-400"
                       >
                         Buat Dokumen
                       </Link>

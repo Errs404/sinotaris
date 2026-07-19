@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { SidebarNav, type NavItem } from "@/components/SidebarNav";
+import { ThemeToggle } from "@/components/ThemeProvider";
 
 interface MobileDrawerProps {
   navItems: NavItem[];
@@ -27,22 +28,25 @@ export function MobileDrawer({
 
   return (
     <>
-      <header className="flex items-center justify-between border-b border-indigo-100 bg-white px-4 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b border-indigo-100 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900 md:hidden">
         <div>
-          <h1 className="text-lg font-extrabold tracking-tight text-indigo-700">
+          <h1 className="text-lg font-extrabold tracking-tight text-indigo-700 dark:text-indigo-400">
             Sinotaris
           </h1>
-          <p className="text-xs font-medium text-slate-400">Notaris &amp; PPAT</p>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500">Notaris &amp; PPAT</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 text-indigo-700 transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-          aria-label="Buka menu navigasi"
-          aria-expanded={open}
-        >
-          <Menu aria-hidden="true" className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-100 text-indigo-700 transition-colors hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700"
+            aria-label="Buka menu navigasi"
+            aria-expanded={open}
+          >
+            <Menu aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {open && (
@@ -53,33 +57,33 @@ export function MobileDrawer({
             onClick={() => setOpen(false)}
             aria-label="Tutup menu navigasi"
           />
-          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-indigo-100 bg-white shadow-xl">
-            <div className="flex items-start justify-between border-b border-indigo-100 px-6 py-5">
+          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-indigo-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between border-b border-indigo-100 px-6 py-5 dark:border-slate-700">
               <div>
-                <h1 className="text-xl font-extrabold tracking-tight text-indigo-700">
+                <h1 className="text-xl font-extrabold tracking-tight text-indigo-700 dark:text-indigo-400">
                   Sinotaris
                 </h1>
-                <p className="mt-0.5 text-xs font-medium text-slate-400">
+                <p className="mt-0.5 text-xs font-medium text-slate-400 dark:text-slate-500">
                   Notaris &amp; PPAT
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-slate-700 dark:hover:text-indigo-300"
                 aria-label="Tutup menu navigasi"
               >
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
             <SidebarNav items={navItems} onNavigate={() => setOpen(false)} />
-            <div className="border-t border-indigo-100 px-6 py-4 text-xs text-slate-500">
-              <p className="font-semibold text-slate-700">{userName}</p>
+            <div className="border-t border-indigo-100 px-6 py-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
+              <p className="font-semibold text-slate-700 dark:text-slate-200">{userName}</p>
               <p>{userRole === "NOTARIS" ? "Notaris (Admin)" : "Staf"}</p>
               <button
                 type="button"
                 onClick={() => signOut({ callbackUrl: "/login" })}
-                className="mt-3 rounded-md border border-indigo-200 px-3 py-1.5 font-medium text-indigo-700 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="mt-3 rounded-md border border-indigo-200 px-3 py-1.5 font-medium text-indigo-700 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700"
               >
                 Keluar
               </button>

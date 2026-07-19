@@ -27,8 +27,8 @@ export default async function TemplateDetailPage({
         <Link href="/dashboard/dokumen" className="text-sm text-indigo-700 hover:underline">
           ← Kembali ke daftar template
         </Link>
-        <h2 className="mt-1 text-2xl font-bold text-slate-800">Buat Dokumen: {template.name}</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="mt-1 text-2xl font-bold text-slate-800 dark:text-slate-100">Buat Dokumen: {template.name}</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Isi form di bawah lalu klik Generate DOCX. Tanggal otomatis diubah jadi teks
           terbilang Bahasa Indonesia.
         </p>

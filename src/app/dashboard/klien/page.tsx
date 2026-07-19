@@ -55,12 +55,12 @@ export default async function KlienPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
             <Users className="h-5 w-5 text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Klien</h2>
-            <p className="text-xs text-slate-500">{totalCount} klien terdaftar</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Klien</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{totalCount} klien terdaftar</p>
           </div>
         </div>
         <Link
@@ -80,7 +80,7 @@ export default async function KlienPage({
             name="q"
             defaultValue={q ?? ""}
             placeholder="Cari nama, NIK, atau telepon..."
-            className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
           />
         </div>
         <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
@@ -88,10 +88,10 @@ export default async function KlienPage({
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50">
+      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700">
+            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:bg-slate-700 dark:text-indigo-300">
               <th className="px-4 py-3">Nama</th>
               <th className="px-4 py-3">Tipe</th>
               <th className="px-4 py-3">NIK</th>
@@ -117,25 +117,25 @@ export default async function KlienPage({
               </tr>
             )}
             {clients.map((client) => (
-              <tr key={client.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60">
+              <tr key={client.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60 dark:border-slate-700 dark:hover:bg-slate-700/50">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <Avatar name={client.name} size="sm" />
-                    <span className="font-medium text-slate-800">{client.name}</span>
+                    <span className="font-medium text-slate-800 dark:text-slate-100">{client.name}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                  <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300">
                     {client.type === "PERORANGAN" ? "Perorangan" : "Badan Hukum"}
                   </span>
                 </td>
-                <td className="px-4 py-3 font-mono text-xs text-slate-600">{client.nik ?? "-"}</td>
-                <td className="px-4 py-3 text-slate-600">{client.phone ?? "-"}</td>
-                <td className="max-w-xs truncate px-4 py-3 text-slate-600">{client.address ?? "-"}</td>
+                <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">{client.nik ?? "-"}</td>
+                <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{client.phone ?? "-"}</td>
+                <td className="max-w-xs truncate px-4 py-3 text-slate-600 dark:text-slate-300">{client.address ?? "-"}</td>
                 <td className="px-4 py-3 text-right">
                   <Link
                     href={`/dashboard/klien/${client.id}`}
-                    className="font-medium text-indigo-700 hover:underline"
+                    className="font-medium text-indigo-700 hover:underline dark:text-indigo-400"
                   >
                     Detail
                   </Link>

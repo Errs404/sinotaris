@@ -29,9 +29,9 @@ const icons: Record<ToastVariant, typeof CheckCircle2> = {
 };
 
 const colors: Record<ToastVariant, string> = {
-  success: "border-green-200 bg-green-50 text-green-800",
-  error: "border-red-200 bg-red-50 text-red-800",
-  info: "border-indigo-200 bg-indigo-50 text-indigo-800",
+  success: "border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200",
+  error: "border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200",
+  info: "border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200",
 };
 
 const iconColors: Record<ToastVariant, string> = {

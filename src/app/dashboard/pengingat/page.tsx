@@ -23,14 +23,14 @@ export default async function PengingatPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Pengingat</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pengingat</h2>
 
       <form
         action={createReminderAction}
-        className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-5 shadow-sm"
+        className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-5 shadow-sm dark:bg-slate-800"
       >
         <div className="min-w-64 flex-1">
-          <label htmlFor="title" className="mb-1 block text-sm font-medium text-slate-700">
+          <label htmlFor="title" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Judul
           </label>
           <input
@@ -42,13 +42,13 @@ export default async function PengingatPage() {
           />
         </div>
         <div>
-          <label htmlFor="dueDate" className="mb-1 block text-sm font-medium text-slate-700">
+          <label htmlFor="dueDate" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Jatuh Tempo
           </label>
           <input id="dueDate" name="dueDate" type="date" required className={inputClass} />
         </div>
         <div>
-          <label htmlFor="type" className="mb-1 block text-sm font-medium text-slate-700">
+          <label htmlFor="type" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
             Jenis
           </label>
           <select id="type" name="type" className={inputClass}>
@@ -65,7 +65,7 @@ export default async function PengingatPage() {
 
       <div className="space-y-2">
         {reminders.length === 0 && (
-          <p className="rounded-xl bg-white p-8 text-center text-slate-400 shadow-sm">
+          <p className="rounded-xl bg-white p-8 text-center text-slate-400 shadow-sm dark:bg-slate-800">
             Belum ada pengingat.
           </p>
         )}
@@ -76,7 +76,7 @@ export default async function PengingatPage() {
           return (
             <div
               key={reminder.id}
-              className={`flex flex-wrap items-center gap-3 rounded-xl bg-white px-5 py-3 shadow-sm ${
+              className={`flex flex-wrap items-center gap-3 rounded-xl bg-white px-5 py-3 shadow-sm dark:bg-slate-800 ${
                 reminder.done ? "opacity-60" : ""
               }`}
             >
@@ -93,14 +93,14 @@ export default async function PengingatPage() {
                 </button>
               </form>
               <div className="flex-1">
-                <p className={`font-medium text-slate-800 ${reminder.done ? "line-through" : ""}`}>
+                <p className={`font-medium text-slate-800 dark:text-slate-100 ${reminder.done ? "line-through" : ""}`}>
                   {reminder.title}
                 </p>
-                <p className="text-xs text-slate-500">{typeLabel[reminder.type]}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{typeLabel[reminder.type]}</p>
               </div>
               <span
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                  overdue ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+                  overdue ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300" : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300"
                 }`}
               >
                 {overdue ? "TERLAMBAT — " : ""}

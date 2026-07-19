@@ -20,7 +20,7 @@ export default async function PekerjaanBaruPage({
           { label: "Tambah Pekerjaan" },
         ]}
       />
-      <h2 className="text-2xl font-bold text-slate-800">Tambah Pekerjaan</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tambah Pekerjaan</h2>
       <PekerjaanForm
         action={createPekerjaanAction}
         defaultKind={kind === "PPAT" ? "PPAT" : "NOTARIS"}

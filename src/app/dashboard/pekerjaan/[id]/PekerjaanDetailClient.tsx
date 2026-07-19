@@ -43,7 +43,7 @@ export function PekerjaanDetailClient({
         ]}
       />
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 className="text-2xl font-bold text-slate-800">{pekerjaan.judul}</h2>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{pekerjaan.judul}</h2>
         <button
           onClick={() => setShowDelete(true)}
           className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"

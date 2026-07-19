@@ -75,13 +75,13 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-bold text-slate-800">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Dashboard</h2>
         <div className="flex gap-2">
           {quickActions.map((action) => (
             <Link
               key={action.href}
               href={action.href}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-800"
             >
               <action.icon className="h-3.5 w-3.5" />
               {action.label}
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50"
+            className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none"
           >
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
                 <stat.icon className="h-4 w-4" />
               </div>
             </div>
-            <p className="mt-2 text-3xl font-extrabold text-slate-800">{stat.value}</p>
+            <p className="mt-2 text-3xl font-extrabold text-slate-800 dark:text-slate-100">{stat.value}</p>
           </div>
         ))}
       </div>
@@ -125,21 +125,21 @@ export default async function DashboardPage() {
 
       <PekerjaanChart data={chartData} />
 
-      <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50">
+      <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
         <div className="mb-3 flex items-center gap-2">
           <Bell className="h-4 w-4 text-amber-500" />
-          <h3 className="font-semibold text-slate-800">Pengingat Terdekat</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Pengingat Terdekat</h3>
         </div>
         {pengingatAktif.length === 0 ? (
-          <p className="text-sm text-slate-500">Tidak ada pengingat aktif.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Tidak ada pengingat aktif.</p>
         ) : (
           <ul className="space-y-2">
             {pengingatAktif.map((item) => (
               <li
                 key={item.id}
-                className="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-2.5 text-sm"
+                className="flex items-center justify-between rounded-lg border border-slate-100 px-4 py-2.5 text-sm dark:border-slate-700"
               >
-                <span className="text-slate-700">{item.title}</span>
+                <span className="text-slate-700 dark:text-slate-300">{item.title}</span>
                 <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
                   {item.dueDate.toLocaleDateString("id-ID")}
                 </span>

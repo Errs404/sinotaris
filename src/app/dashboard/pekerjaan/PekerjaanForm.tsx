@@ -39,8 +39,8 @@ export function PekerjaanForm({
 
   return (
     <form action={action} className="max-w-3xl space-y-6">
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Data Pekerjaan</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Pekerjaan</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Jabatan"
@@ -87,9 +87,9 @@ export function PekerjaanForm({
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-1 font-semibold text-slate-800">Data Laporan PPAT</h3>
-        <p className="mb-4 text-xs text-slate-500">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-1 font-semibold text-slate-800 dark:text-slate-100">Data Laporan PPAT</h3>
+        <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           Opsional — diisi untuk pekerjaan PPAT agar masuk ke laporan bulanan ATR/BPN.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -103,8 +103,8 @@ export function PekerjaanForm({
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Pajak &amp; Biaya</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Pajak &amp; Biaya</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="BPHTB (Rp)" name="bphtb" defaultValue={toStr(pekerjaan?.bphtb)} />
           <Field label="PPh Final (Rp)" name="pphFinal" defaultValue={toStr(pekerjaan?.pphFinal)} />

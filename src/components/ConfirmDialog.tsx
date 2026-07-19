@@ -38,21 +38,21 @@ export function ConfirmDialog({
         onClick={onClose}
         aria-label="Tutup dialog"
       />
-      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800">
         <div className="flex items-start gap-4">
           <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${variant === "danger" ? "bg-red-100" : "bg-amber-100"}`}>
             <AlertTriangle className={`h-5 w-5 ${iconClass}`} />
           </div>
           <div>
-            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-            {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
+            {description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Batal
           </button>

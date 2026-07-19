@@ -15,10 +15,10 @@ export default async function PengaturanPage() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <h2 className="text-2xl font-bold text-slate-800">Pengaturan</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pengaturan</h2>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Status Langganan</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Status Langganan</h3>
         <div className="flex flex-wrap items-center gap-4">
           <span
             className={`rounded-full px-3 py-1 text-sm font-semibold ${
@@ -27,11 +27,11 @@ export default async function PengaturanPage() {
           >
             {subscription.active ? "Aktif" : "Tidak Aktif"}
           </span>
-          <span className="text-sm text-slate-600">
+          <span className="text-sm text-slate-600 dark:text-slate-300">
             Paket: <strong>{subscription.plan}</strong>
           </span>
           {subscription.periodEnd && (
-            <span className="text-sm text-slate-600">
+            <span className="text-sm text-slate-600 dark:text-slate-300">
               Berlaku sampai: <strong>{subscription.periodEnd.toLocaleDateString("id-ID")}</strong>
             </span>
           )}
@@ -39,8 +39,8 @@ export default async function PengaturanPage() {
       </div>
 
       {isNotaris ? (
-        <form action={updateOfficeAction} className="rounded-xl bg-white p-6 shadow-sm">
-          <h3 className="mb-4 font-semibold text-slate-800">Data Kantor</h3>
+        <form action={updateOfficeAction} className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+          <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Kantor</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Field label="Nama Kantor" name="name" defaultValue={office?.name} required />
@@ -60,7 +60,7 @@ export default async function PengaturanPage() {
           </div>
         </form>
       ) : (
-        <div className="rounded-xl bg-white p-6 text-sm text-slate-500 shadow-sm">
+        <div className="rounded-xl bg-white p-6 text-sm text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-400">
           Pengaturan kantor hanya bisa diubah oleh Notaris (Admin).
         </div>
       )}

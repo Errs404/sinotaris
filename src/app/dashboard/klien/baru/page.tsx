@@ -12,7 +12,7 @@ export default function KlienBaruPage() {
           { label: "Tambah Klien" },
         ]}
       />
-      <h2 className="text-2xl font-bold text-slate-800">Tambah Klien</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tambah Klien</h2>
       <KlienForm action={createClientAction} submitLabel="Simpan Klien" />
     </div>
   );

@@ -47,7 +47,7 @@ function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
           placeholder="nama@kantor.id"
         />
       </div>
@@ -79,10 +79,10 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-600 via-indigo-500 to-violet-600 px-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-slate-900">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight text-indigo-700">Sinotaris</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-3xl font-extrabold tracking-tight text-indigo-700 dark:text-indigo-400">Sinotaris</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Sistem Informasi Kantor Notaris &amp; PPAT
           </p>
         </div>

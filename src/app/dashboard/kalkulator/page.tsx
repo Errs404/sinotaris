@@ -27,17 +27,17 @@ export default function KalkulatorPage() {
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-slate-800">Kalkulator Biaya</h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Kalkulator Biaya</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Perkiraan BPHTB, PPh Final, dan honorarium maksimal. Angka NPOPTKP bisa
           berbeda per daerah — silakan sesuaikan.
         </p>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="harga" className="mb-1 block text-sm font-medium text-slate-700">
+            <label htmlFor="harga" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
               Harga Transaksi / NJOP (Rp)
             </label>
             <input
@@ -46,11 +46,11 @@ export default function KalkulatorPage() {
               value={hargaNum ? hargaNum.toLocaleString("id-ID") : ""}
               onChange={(e) => setHarga(e.target.value)}
               placeholder="500.000.000"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
           <div>
-            <label htmlFor="npoptkp" className="mb-1 block text-sm font-medium text-slate-700">
+            <label htmlFor="npoptkp" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
               NPOPTKP (Rp)
             </label>
             <input
@@ -58,24 +58,24 @@ export default function KalkulatorPage() {
               inputMode="numeric"
               value={parseRupiah(npoptkp) ? parseRupiah(npoptkp).toLocaleString("id-ID") : ""}
               onChange={(e) => setNpoptkp(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
             />
           </div>
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Hasil Perhitungan</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Hasil Perhitungan</h3>
         <div className="space-y-3">
           {rows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span className="text-sm text-slate-600">{row.label}</span>
-              <span className="font-semibold text-slate-800">{formatRupiah(row.value)}</span>
+            <div key={row.label} className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-700">
+              <span className="text-sm text-slate-600 dark:text-slate-300">{row.label}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">{formatRupiah(row.value)}</span>
             </div>
           ))}
           <div className="flex items-center justify-between pt-1">
-            <span className="font-semibold text-slate-800">Total Perkiraan</span>
-            <span className="text-xl font-bold text-indigo-700">{formatRupiah(result.total)}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-100">Total Perkiraan</span>
+            <span className="text-xl font-bold text-indigo-700 dark:text-indigo-400">{formatRupiah(result.total)}</span>
           </div>
         </div>
         <p className="mt-4 text-xs text-slate-400">

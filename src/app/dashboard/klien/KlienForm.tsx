@@ -32,8 +32,8 @@ export function KlienForm({
 
   return (
     <form action={action} className="max-w-3xl space-y-6">
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Data Utama</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Utama</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Tipe Klien"
@@ -62,8 +62,8 @@ export function KlienForm({
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Kelahiran &amp; Status</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Kelahiran &amp; Status</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Tempat Lahir" name="tempatLahir" defaultValue={client?.tempatLahir} />
           <Field label="Tanggal Lahir" name="tanggalLahir" type="date" defaultValue={tanggalLahir} />
@@ -83,8 +83,8 @@ export function KlienForm({
         </div>
       </div>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h3 className="mb-4 font-semibold text-slate-800">Kontak</h3>
+      <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+        <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Kontak</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Telepon / WA" name="phone" defaultValue={client?.phone} />
           <Field label="Email" name="email" type="email" defaultValue={client?.email} />

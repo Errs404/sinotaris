@@ -60,7 +60,7 @@ export default async function PekerjaanPage({
 
   const tabClass = (active: boolean) =>
     `rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-      active ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "bg-white text-slate-600 hover:bg-indigo-50"
+      active ? "bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-none" : "bg-white text-slate-600 hover:bg-indigo-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
     }`;
 
   return (
@@ -69,12 +69,12 @@ export default async function PekerjaanPage({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-900/50">
             <Briefcase className="h-5 w-5 text-indigo-600" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Pekerjaan</h2>
-            <p className="text-xs text-slate-500">{totalCount} pekerjaan {kind}</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pekerjaan</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{totalCount} pekerjaan {kind}</p>
           </div>
         </div>
         <Link
@@ -104,7 +104,7 @@ export default async function PekerjaanPage({
               name="q"
               defaultValue={q ?? ""}
               placeholder="Cari judul, jenis, atau nomor akta..."
-              className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              className="w-full rounded-lg border border-slate-200 py-2 pl-10 pr-3 text-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500"
             />
           </div>
           <button className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700">
@@ -113,10 +113,10 @@ export default async function PekerjaanPage({
         </form>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50">
+      <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700">
+            <tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:bg-slate-700 dark:text-indigo-300">
               <th className="px-4 py-3">No. Akta</th>
               <th className="px-4 py-3">Tanggal</th>
               <th className="px-4 py-3">Jenis</th>
@@ -139,13 +139,13 @@ export default async function PekerjaanPage({
             {items.map((item) => {
               const status = statusLabel[item.status] ?? statusLabel.MASUK;
               return (
-                <tr key={item.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60">
-                  <td className="px-4 py-3 font-mono text-xs text-slate-600">{item.nomorAkta ?? "-"}</td>
-                  <td className="px-4 py-3 text-slate-600">
+                <tr key={item.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60 dark:border-slate-700 dark:hover:bg-slate-700/50">
+                  <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-300">{item.nomorAkta ?? "-"}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
                     {item.tanggalAkta ? item.tanggalAkta.toLocaleDateString("id-ID") : "-"}
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{item.jenis}</td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{item.judul}</td>
+                  <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{item.jenis}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-100">{item.judul}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.className}`}>
                       {status.label}
@@ -154,7 +154,7 @@ export default async function PekerjaanPage({
                   <td className="px-4 py-3 text-right">
                     <Link
                       href={`/dashboard/pekerjaan/${item.id}`}
-                      className="font-medium text-indigo-700 hover:underline"
+                      className="font-medium text-indigo-700 hover:underline dark:text-indigo-400"
                     >
                       Detail
                     </Link>

@@ -1,7 +1,7 @@
 // Komponen form kecil yang dipakai bersama di seluruh dashboard
 
 export const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500";
+  "w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:placeholder-slate-500";
 
 export function Field({
   label,
@@ -20,7 +20,7 @@ export function Field({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700">
+      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
         {required && <span className="text-red-500"> *</span>}
       </label>
@@ -50,7 +50,7 @@ export function SelectField({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700">
+      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
       </label>
       <select id={name} name={name} defaultValue={defaultValue ?? undefined} className={inputClass}>
@@ -77,7 +77,7 @@ export function TextArea({
 }) {
   return (
     <div>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700">
+      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
         {label}
       </label>
       <textarea id={name} name={name} rows={rows} defaultValue={defaultValue ?? ""} className={inputClass} />

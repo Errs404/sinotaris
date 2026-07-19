@@ -63,8 +63,8 @@ export function KlienDetailClient({
         <div className="flex items-center gap-4">
           <Avatar name={client.name} size="lg" />
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">{client.name}</h2>
-            <p className="text-sm text-slate-500">{client.nik ?? "NIK belum diisi"}</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{client.name}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{client.nik ?? "NIK belum diisi"}</p>
           </div>
         </div>
         <button

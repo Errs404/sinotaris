@@ -1,12 +1,19 @@
 import mammoth from "mammoth";
+import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
 import { createWorker } from "tesseract.js";
 import path from "path";
 import PizZip from "pizzip";
 import { imageSize } from "image-size";
+import { pathToFileURL } from "url";
 
 const MAX_EXTRACTED_CHARS = 1_000_000;
 let ocrQueue: Promise<void> = Promise.resolve();
+
+const pdfWorkerUrl = pathToFileURL(
+  path.join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build", "pdf.worker.mjs"),
+).href;
+PDFParse.setWorker(pdfWorkerUrl);
 
 function capText(text: string): string {
   if (text.length > MAX_EXTRACTED_CHARS) throw new Error("Teks hasil ekstraksi terlalu besar (maksimal 1 juta karakter).");

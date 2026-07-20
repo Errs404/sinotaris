@@ -65,6 +65,18 @@ Pengembangan lanjutan dari [skmht-generator](https://github.com/Errs404/skmht-ge
 - File template `.docx` dan dokumen hasil generate disimpan di `storage/` — **tidak dipush ke Git** karena berisi data klien (NIK, alamat, dsb).
 - `.env` tidak dipush; gunakan `.env.example` sebagai acuan.
 
+### Pemindai & Arsip Dokumen (lokal/offline)
+
+- Mendukung PDF digital, DOCX, JPG, PNG, dan WEBP (maksimal 15 MB).
+- OCR gambar memakai Tesseract.js dengan model Bahasa Indonesia yang dibundel lokal; file tidak dikirim ke layanan cloud.
+- PDF hasil scan belum dirender per halaman. Simpan/unggah halaman sebagai JPG/PNG agar diproses OCR.
+- Hasil ekstraksi selalu berstatus **Perlu Review**. Setelah dikoreksi dan disimpan, status menjadi **Dikonfirmasi** dan baru dapat digunakan sebagai sumber generator dokumen.
+- Modul arsip hanya dapat diakses role **NOTARIS** pada versi awal.
+- File asli disimpan di `storage/archives/<officeId>/` dan metadata/hasil ekstraksi disimpan di PostgreSQL.
+- Batas awal per kantor: 500 file atau total 500 MB.
+- Untuk deployment production, gunakan volume privat persisten dengan permission terbatas, backup terenkripsi, dan prosedur restore yang diuji. Jangan gunakan filesystem ephemeral/serverless untuk arsip notarial.
+- Backup harus mencakup **database PostgreSQL dan folder `storage/archives/` secara bersamaan**.
+
 ## Roadmap
 
 - [x] Fondasi: auth, schema multi-tenant, subscription check, dashboard shell

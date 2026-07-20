@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { TemplateFieldsDef } from "@/lib/templateFields";
 import { GeneratorForm } from "./GeneratorForm";
 import { buildDocumentPrefill } from "@/lib/documentPrefill";
+import { buildArchivePrefill } from "@/lib/archivePrefill";
 
 export default async function TemplateDetailPage({
   params,
@@ -40,6 +41,22 @@ export default async function TemplateDetailPage({
     label: `${job.jenis} — ${job.judul}${job.nomorAkta ? ` (${job.nomorAkta})` : ""}`,
     values: buildDocumentPrefill(job),
   }));
+  const archives = session!.user.role === "NOTARIS"
+    ? await prisma.documentArchive.findMany({
+        where: { officeId: session!.user.officeId, status: "DIKONFIRMASI" },
+        orderBy: { updatedAt: "desc" },
+        take: 100,
+        select: { id: true, originalName: true, type: true, extractedJson: true },
+      })
+    : [];
+  const archiveOptions = archives.map((archive) => {
+    const extracted = archive.extractedJson as { fields?: Record<string, string> };
+    return {
+      id: archive.id,
+      label: `${archive.originalName} — ${archive.type.replaceAll("_", " ")}`,
+      values: buildArchivePrefill(extracted.fields ?? {}),
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -53,7 +70,7 @@ export default async function TemplateDetailPage({
           terbilang Bahasa Indonesia.
         </p>
       </div>
-      <GeneratorForm templateId={template.id} sections={sections} jobs={jobOptions} />
+      <GeneratorForm templateId={template.id} sections={sections} jobs={jobOptions} archives={archiveOptions} />
     </div>
   );
 }

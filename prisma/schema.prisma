@@ -14,7 +14,7 @@ datasource db {
 // ===== Tenant & Auth =====
 
 model Office {
-  id            String         @id @default(cuid())
+  id            String   @id @default(cuid())
   name          String // Nama kantor, mis. "Kantor Notaris & PPAT Budi, S.H., M.Kn."
   notarisName   String // Nama notaris pemilik
   notarisTitle  String? // Gelar, mis. "S.H., M.Kn."
@@ -23,8 +23,8 @@ model Office {
   wilayahKerja  String? // mis. "Provinsi Jawa Tengah"
   skNotarisNo   String? // Nomor SK pengangkatan
   skNotarisDate String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   users         User[]
   subscriptions Subscription[]
@@ -33,6 +33,7 @@ model Office {
   invoices      Invoice[]
   reminders     Reminder[]
   templates     DocTemplate[]
+  archives      DocumentArchive[]
 }
 
 enum UserRole {
@@ -41,16 +42,17 @@ enum UserRole {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  officeId     String
-  office       Office   @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  name         String
-  email        String   @unique
-  passwordHash String
-  role         UserRole @default(STAF)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String         @id @default(cuid())
+  officeId      String
+  office        Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          UserRole       @default(STAF)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  generatedDocs GeneratedDoc[]
 }
 
 // ===== Subscription =====
@@ -85,10 +87,10 @@ model Subscription {
 // ===== Klien =====
 
 model Client {
-  id           String      @id @default(cuid())
+  id           String     @id @default(cuid())
   officeId     String
-  office       Office      @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  type         ClientType  @default(PERORANGAN)
+  office       Office     @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  type         ClientType @default(PERORANGAN)
   name         String
   nik          String? // 16 digit, untuk perorangan
   npwp         String?
@@ -97,16 +99,17 @@ model Client {
   gender       String? // Tuan / Nyonya / Nona
   pekerjaan    String?
   statusKawin  String?
-  wargaNegara  String?     @default("Indonesia")
+  wargaNegara  String?    @default("Indonesia")
   address      String?
   phone        String?
   email        String?
   notes        String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   pekerjaanList PekerjaanClient[]
   invoices      Invoice[]
+  archives      DocumentArchive[]
 
   @@index([officeId, name])
 }
@@ -144,29 +147,30 @@ model Pekerjaan {
   keterangan  String?
 
   // Data laporan PPAT (opsional, untuk laporan bulanan ATR/BPN)
-  bentukHukum String? // JB, HB, APHT, dst.
-  pihakAlih   String?
-  pihakTerima String?
-  luasTanah   Decimal?        @db.Decimal(12, 2)
-  luasBangunan Decimal?       @db.Decimal(12, 2)
-  hargaTransaksi Decimal?     @db.Decimal(18, 2)
-  nop         String?
+  bentukHukum    String? // JB, HB, APHT, dst.
+  pihakAlih      String?
+  pihakTerima    String?
+  luasTanah      Decimal? @db.Decimal(12, 2)
+  luasBangunan   Decimal? @db.Decimal(12, 2)
+  hargaTransaksi Decimal? @db.Decimal(18, 2)
+  nop            String?
 
   // Pajak
-  bphtb       Decimal?        @db.Decimal(18, 2)
-  pphFinal    Decimal?        @db.Decimal(18, 2)
-  sspTanggal  DateTime?
-  ssbTanggal  DateTime?
+  bphtb      Decimal?  @db.Decimal(18, 2)
+  pphFinal   Decimal?  @db.Decimal(18, 2)
+  sspTanggal DateTime?
+  ssbTanggal DateTime?
 
   // Biaya kantor (hanya terlihat role NOTARIS)
-  honorarium  Decimal?        @db.Decimal(18, 2)
+  honorarium Decimal? @db.Decimal(18, 2)
 
-  clients     PekerjaanClient[]
-  invoices    Invoice[]
-  documents   GeneratedDoc[]
+  clients   PekerjaanClient[]
+  invoices  Invoice[]
+  documents GeneratedDoc[]
+  archives  DocumentArchive[]
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([officeId, kind, status])
   @@index([officeId, tanggalAkta])
@@ -249,24 +253,75 @@ model Reminder {
 // ===== Generator Dokumen =====
 
 model DocTemplate {
-  id          String         @id @default(cuid())
-  officeId    String
-  office      Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  name        String // mis. "SKMHT"
-  fileName    String // nama file .docx di storage lokal (folder templates/)
-  fieldsJson  Json // definisi field form (diporting dari lib/fields.js)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  documents   GeneratedDoc[]
+  id         String         @id @default(cuid())
+  officeId   String
+  office     Office         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name       String // mis. "SKMHT"
+  fileName   String // nama file .docx di storage lokal (folder templates/)
+  fieldsJson Json // definisi field form (diporting dari lib/fields.js)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  documents  GeneratedDoc[]
 }
 
 model GeneratedDoc {
-  id          String      @id @default(cuid())
-  templateId  String
-  template    DocTemplate @relation(fields: [templateId], references: [id])
-  pekerjaanId String?
-  pekerjaan   Pekerjaan?  @relation(fields: [pekerjaanId], references: [id])
-  fileName    String
-  dataJson    Json // snapshot data form saat generate
-  createdAt   DateTime    @default(now())
+  id               String           @id @default(cuid())
+  templateId       String
+  template         DocTemplate      @relation(fields: [templateId], references: [id])
+  pekerjaanId      String?
+  pekerjaan        Pekerjaan?       @relation(fields: [pekerjaanId], references: [id])
+  archiveId        String?
+  archive          DocumentArchive? @relation(fields: [archiveId], references: [id], onDelete: SetNull)
+  generatedById    String?
+  generatedBy      User?            @relation(fields: [generatedById], references: [id], onDelete: SetNull)
+  fileName         String
+  dataJson         Json // snapshot data form saat generate
+  templateChecksum String?
+  archiveChecksum  String?
+  outputChecksum   String?
+  createdAt        DateTime         @default(now())
+}
+
+// ===== Pemindai & Arsip Dokumen =====
+
+enum ArchiveDocumentType {
+  KTP
+  KARTU_KELUARGA
+  NPWP
+  SERTIPIKAT
+  AKTA_PERJANJIAN
+  UMUM
+}
+
+enum ArchiveStatus {
+  PERLU_REVIEW
+  DIKONFIRMASI
+  GAGAL
+}
+
+model DocumentArchive {
+  id            String              @id @default(cuid())
+  officeId      String
+  office        Office              @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  clientId      String?
+  client        Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  pekerjaanId   String?
+  pekerjaan     Pekerjaan?          @relation(fields: [pekerjaanId], references: [id], onDelete: SetNull)
+  type          ArchiveDocumentType @default(UMUM)
+  status        ArchiveStatus       @default(PERLU_REVIEW)
+  originalName  String
+  storageKey    String              @unique
+  mimeType      String
+  sizeBytes     Int
+  checksum      String
+  rawText       String              @default("")
+  extractedJson Json
+  errorMessage  String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  generatedDocs GeneratedDoc[]
+
+  @@index([officeId, status, createdAt])
+  @@index([officeId, clientId])
+  @@index([officeId, pekerjaanId])
 }

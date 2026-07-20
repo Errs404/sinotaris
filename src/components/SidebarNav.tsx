@@ -12,6 +12,7 @@ import {
   Receipt,
   Settings,
   Users,
+  ScanText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,6 +26,7 @@ const iconMap: Record<string, LucideIcon> = {
   Bell,
   Calculator,
   Settings,
+  ScanText,
 };
 
 export interface NavItem {

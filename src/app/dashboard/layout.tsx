@@ -6,11 +6,12 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { ToastProvider } from "@/components/Toast";
 import { ThemeToggle } from "@/components/ThemeProvider";
 
-const navItems = [
+const allNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { href: "/dashboard/klien", label: "Klien", icon: "Users" },
   { href: "/dashboard/pekerjaan", label: "Pekerjaan", icon: "Briefcase" },
   { href: "/dashboard/dokumen", label: "Generator Dokumen", icon: "FileText" },
+  { href: "/dashboard/arsip", label: "Pemindai & Arsip", icon: "ScanText" },
   { href: "/dashboard/invoice", label: "Invoice", icon: "Receipt" },
   { href: "/dashboard/laporan", label: "Laporan Bulanan", icon: "ClipboardList" },
   { href: "/dashboard/pengingat", label: "Pengingat", icon: "Bell" },
@@ -27,6 +28,9 @@ export default async function DashboardLayout({
   if (!session?.user) redirect("/login");
 
   const subscription = await getSubscriptionState(session.user.officeId);
+  const navItems = session.user.role === "NOTARIS"
+    ? allNavItems
+    : allNavItems.filter((item) => item.href !== "/dashboard/arsip");
 
   return (
     <ToastProvider>

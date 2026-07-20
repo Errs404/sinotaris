@@ -6,6 +6,7 @@ import { readTemplateFile } from "@/lib/storage";
 import { generateDocx, sanitizeFileName } from "@/lib/docx";
 import { formatIndonesianDateText, formatAktaDate, formatDisplayDate } from "@/lib/indoDate";
 import { collectDatePairs, type TemplateFieldsDef } from "@/lib/templateFields";
+import crypto from "crypto";
 
 export async function POST(
   request: NextRequest,
@@ -25,6 +26,7 @@ export async function POST(
 
     const body = (await request.json()) as Record<string, string>;
     const pekerjaanId = String(body.__pekerjaanId ?? "").trim() || null;
+    const archiveId = String(body.__archiveId ?? "").trim() || null;
     const sections = template.fieldsJson as unknown as TemplateFieldsDef;
 
     if (pekerjaanId) {
@@ -33,6 +35,16 @@ export async function POST(
         select: { id: true },
       });
       if (!ownedJob) return new NextResponse("Pekerjaan tidak ditemukan.", { status: 404 });
+    }
+    let archiveChecksum: string | null = null;
+    if (archiveId) {
+      if (session.user.role !== "NOTARIS") return new NextResponse("Akses arsip ditolak.", { status: 403 });
+      const ownedArchive = await prisma.documentArchive.findFirst({
+        where: { id: archiveId, officeId: session.user.officeId, status: "DIKONFIRMASI" },
+        select: { id: true, checksum: true },
+      });
+      if (!ownedArchive) return new NextResponse("Arsip tidak ditemukan.", { status: 404 });
+      archiveChecksum = ownedArchive.checksum;
     }
 
     // Server-side: hitung ulang semua field otomatis (jangan percaya client)
@@ -60,6 +72,8 @@ export async function POST(
 
     const templateBuffer = readTemplateFile(template.fileName);
     const buffer = generateDocx(templateBuffer, data);
+    const templateChecksum = crypto.createHash("sha256").update(templateBuffer).digest("hex");
+    const outputChecksum = crypto.createHash("sha256").update(buffer).digest("hex");
 
     const subjectName =
       data.nama_pemberi || data.nama_debitor || data.nama_klien || data.nama || "";
@@ -73,8 +87,13 @@ export async function POST(
       data: {
         templateId: template.id,
         pekerjaanId,
+        archiveId,
+        generatedById: session.user.id,
         fileName,
         dataJson: data,
+        templateChecksum,
+        archiveChecksum,
+        outputChecksum,
       },
     });
 

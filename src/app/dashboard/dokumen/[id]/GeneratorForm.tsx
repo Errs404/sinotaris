@@ -11,10 +11,12 @@ export function GeneratorForm({
   templateId,
   sections,
   jobs,
+  archives,
 }: {
   templateId: string;
   sections: TemplateFieldsDef;
   jobs: Array<{ id: string; label: string; values: Record<string, string> }>;
+  archives: Array<{ id: string; label: string; values: Record<string, string> }>;
 }) {
   // State semua nilai field, diawali default
   const initial = useMemo(() => {
@@ -31,6 +33,7 @@ export function GeneratorForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [pekerjaanId, setPekerjaanId] = useState("");
+  const [archiveId, setArchiveId] = useState("");
 
   function applyAutomaticValues(source: Record<string, string>) {
     const next = { ...source };
@@ -54,12 +57,24 @@ export function GeneratorForm({
 
   function selectJob(id: string) {
     setPekerjaanId(id);
+    setArchiveId("");
     const job = jobs.find((item) => item.id === id);
     if (!job) {
       setValues(initial);
       return;
     }
     setValues(applyAutomaticValues({ ...initial, ...job.values }));
+  }
+
+  function selectArchive(id: string) {
+    setArchiveId(id);
+    setPekerjaanId("");
+    const archive = archives.find((item) => item.id === id);
+    if (!archive) {
+      setValues(initial);
+      return;
+    }
+    setValues(applyAutomaticValues({ ...initial, ...archive.values }));
   }
 
   function setValue(name: string, value: string) {
@@ -106,7 +121,7 @@ export function GeneratorForm({
       const res = await fetch(`/api/dokumen/${templateId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, __pekerjaanId: pekerjaanId }),
+        body: JSON.stringify({ ...payload, __pekerjaanId: pekerjaanId, __archiveId: archiveId }),
       });
 
       if (!res.ok) {
@@ -150,6 +165,24 @@ export function GeneratorForm({
         >
           <option value="">— Pilih pekerjaan —</option>
           {jobs.map((job) => <option key={job.id} value={job.id}>{job.label}</option>)}
+        </select>
+      </div>
+
+      <div className="rounded-xl border border-violet-200 bg-violet-50 p-5 dark:border-violet-800 dark:bg-violet-950/30">
+        <label htmlFor="arsip" className="mb-1 block text-sm font-semibold text-violet-900 dark:text-violet-200">
+          Ambil data dari arsip hasil ekstraksi
+        </label>
+        <p className="mb-3 text-xs text-violet-700 dark:text-violet-300">
+          Opsional. Memilih arsip akan mengisi field yang cocok berdasarkan hasil review ekstraksi.
+        </p>
+        <select
+          id="arsip"
+          value={archiveId}
+          onChange={(event) => selectArchive(event.target.value)}
+          className="w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"
+        >
+          <option value="">— Pilih arsip —</option>
+          {archives.map((archive) => <option key={archive.id} value={archive.id}>{archive.label}</option>)}
         </select>
       </div>
       {sections.map((section) => (

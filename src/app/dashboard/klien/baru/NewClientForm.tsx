@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, FileScan, LoaderCircle, ScanText, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Eye, EyeOff, FileScan, LoaderCircle, ScanText, Trash2 } from "lucide-react";
 import { archiveTypeLabels, type ArchiveTypeValue } from "@/lib/archiveTypes";
 import {
   clientScanFields,
@@ -18,6 +18,7 @@ type ClientValues = Record<ClientField, string> & { type: "PERORANGAN" | "BADAN_
 interface ScannedDocument {
   archiveId: string;
   originalName: string;
+  mimeType: string;
   documentType: ArchiveTypeValue;
   confidence: number;
   warnings: string[];
@@ -68,6 +69,7 @@ export function NewClientForm({ action, canScan }: { action: (formData: FormData
   const [acceptedMismatches, setAcceptedMismatches] = useState<Record<string, string>>({});
   const [scanError, setScanError] = useState("");
   const [cancellingId, setCancellingId] = useState("");
+  const [previewId, setPreviewId] = useState("");
   const [isScanning, startScanning] = useTransition();
 
   const conflicts = useMemo<Conflict[]>(() => {
@@ -114,6 +116,7 @@ export function NewClientForm({ action, canScan }: { action: (formData: FormData
         const document: ScannedDocument = {
           archiveId: result.archiveId,
           originalName: result.originalName,
+          mimeType: result.mimeType,
           documentType: result.documentType,
           confidence: result.confidence,
           warnings: result.warnings,
@@ -157,6 +160,7 @@ export function NewClientForm({ action, canScan }: { action: (formData: FormData
       await cancelClientScanAction(document.archiveId);
       const remaining = documents.filter((item) => item.archiveId !== document.archiveId);
       setDocuments(remaining);
+      if (previewId === document.archiveId) setPreviewId("");
       setAcceptedMismatches((current) => Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(`${document.archiveId}:`))));
       const next = { ...valuesRef.current };
       for (const field of clientScanFields) {
@@ -192,7 +196,11 @@ export function NewClientForm({ action, canScan }: { action: (formData: FormData
             <button disabled={isScanning} className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-wait disabled:opacity-70">{isScanning ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}{isScanning ? "Memindai..." : "Scan & Autofill"}</button>
           </form>
           {scanError && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{scanError}</p>}
-          {documents.length > 0 && <div className="mt-4 space-y-2">{documents.map((document) => <div key={document.archiveId} className="rounded-lg border border-indigo-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><div><p className="text-sm font-medium text-slate-800 dark:text-slate-100">{document.originalName}</p><p className="text-xs text-slate-500 dark:text-slate-400">{archiveTypeLabels[document.documentType]} · Akurasi parser {document.confidence}%</p></div></div><button type="button" disabled={cancellingId === document.archiveId} onClick={() => cancelDocument(document)} className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> {cancellingId === document.archiveId ? "Menghapus..." : "Batalkan & hapus scan"}</button></div>{document.warnings.length > 0 && <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">{document.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>}</div>)}</div>}
+          {documents.length > 0 && <div className="mt-4 space-y-2">{documents.map((document) => {
+            const canPreview = document.mimeType === "application/pdf" || document.mimeType.startsWith("image/");
+            const isPreviewOpen = previewId === document.archiveId;
+            return <div key={document.archiveId} className="rounded-lg border border-indigo-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900"><div className="flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><CheckCircle2 className="h-5 w-5 text-emerald-500" /><div><p className="text-sm font-medium text-slate-800 dark:text-slate-100">{document.originalName}</p><p className="text-xs text-slate-500 dark:text-slate-400">{archiveTypeLabels[document.documentType]} · Akurasi parser {document.confidence}%</p></div></div><div className="flex flex-wrap items-center gap-3">{canPreview && <button type="button" onClick={() => setPreviewId(isPreviewOpen ? "" : document.archiveId)} className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">{isPreviewOpen ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}{isPreviewOpen ? "Tutup preview" : "Preview"}</button>}<button type="button" disabled={cancellingId === document.archiveId} onClick={() => cancelDocument(document)} className="inline-flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"><Trash2 className="h-3.5 w-3.5" /> {cancellingId === document.archiveId ? "Menghapus..." : "Batalkan & hapus scan"}</button></div></div>{document.warnings.length > 0 && <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">{document.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>}{isPreviewOpen && <div className="mt-4 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-950"><iframe title={`Preview ${document.originalName}`} src={`/api/arsip/${document.archiveId}/file?preview=1`} className="h-[520px] w-full sm:h-[620px]" /></div>}</div>;
+          })}</div>}
         </section>
       )}
 

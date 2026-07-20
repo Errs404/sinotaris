@@ -27,6 +27,7 @@ export async function scanClientDocumentAction(formData: FormData) {
   return {
     archiveId: result.id,
     originalName: result.originalName,
+    mimeType: result.mimeType,
     documentType: result.extracted.documentType,
     confidence: result.extracted.confidence,
     fields: result.extracted.fields,

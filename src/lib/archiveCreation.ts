@@ -24,7 +24,7 @@ export async function createArchiveFromFile({
   clientId?: string | null;
   pekerjaanId?: string | null;
   uploadedById?: string | null;
-}): Promise<{ id: string; originalName: string; extracted: ExtractedArchiveData }> {
+}): Promise<{ id: string; originalName: string; mimeType: string; extracted: ExtractedArchiveData }> {
   const releaseUpload = await acquireArchiveUploadLock();
   try {
     validateArchiveFile(file);
@@ -68,7 +68,7 @@ export async function createArchiveFromFile({
           },
         },
       });
-      return { id: archive.id, originalName: archive.originalName, extracted };
+      return { id: archive.id, originalName: archive.originalName, mimeType: archive.mimeType, extracted };
     } catch (error) {
       if (stored) deleteArchiveFile(officeId, stored.storageKey);
       throw error;

@@ -39,7 +39,7 @@ export default async function ArchiveDetailPage({ params }: { params: Promise<{ 
           <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">{archive.originalName}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">{archiveTypeLabels[archive.type as ArchiveTypeValue]} · {(archive.sizeBytes / 1024).toFixed(1)} KB · Akurasi parser {extracted.confidence ?? 0}%</p>
         </div>
-        <Link href={`/api/arsip/${archive.id}/file`} target="_blank" className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700"><ExternalLink className="h-4 w-4" /> Buka file asli</Link>
+        <Link href={`/api/arsip/${archive.id}/file?preview=1`} target="_blank" className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700"><ExternalLink className="h-4 w-4" /> Buka file asli</Link>
       </div>
 
       {extracted.warnings?.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">{extracted.warnings.map((warning) => <p key={warning}>• {warning}</p>)}</div>}

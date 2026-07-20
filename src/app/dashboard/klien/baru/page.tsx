@@ -1,8 +1,10 @@
 import { Breadcrumb } from "@/components/Breadcrumb";
-import { KlienForm } from "../KlienForm";
 import { createClientAction } from "../actions";
+import { auth } from "@/auth";
+import { NewClientForm } from "./NewClientForm";
 
-export default function KlienBaruPage() {
+export default async function KlienBaruPage() {
+  const session = await auth();
   return (
     <div className="space-y-6">
       <Breadcrumb
@@ -13,7 +15,7 @@ export default function KlienBaruPage() {
         ]}
       />
       <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Tambah Klien</h2>
-      <KlienForm action={createClientAction} submitLabel="Simpan Klien" />
+      <NewClientForm action={createClientAction} canScan={session!.user.role === "NOTARIS"} />
     </div>
   );
 }

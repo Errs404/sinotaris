@@ -46,15 +46,55 @@ export default async function TemplateDetailPage({
         where: { officeId: session!.user.officeId, status: "DIKONFIRMASI" },
         orderBy: { updatedAt: "desc" },
         take: 100,
-        select: { id: true, originalName: true, type: true, extractedJson: true },
+        select: {
+          id: true,
+          originalName: true,
+          type: true,
+          extractedJson: true,
+          client: {
+            select: {
+              name: true,
+              nik: true,
+              npwp: true,
+              tempatLahir: true,
+              tanggalLahir: true,
+              gender: true,
+              pekerjaan: true,
+              statusKawin: true,
+              wargaNegara: true,
+              address: true,
+            },
+          },
+        },
       })
     : [];
   const archiveOptions = archives.map((archive) => {
-    const extracted = archive.extractedJson as { fields?: Record<string, string> };
+    const extracted = archive.extractedJson as {
+      fields?: Record<string, string>;
+      confirmedClientFields?: Record<string, string>;
+    };
+    const currentClientFields: Record<string, string> = archive.client
+      ? {
+          name: archive.client.name,
+          nik: archive.client.nik ?? "",
+          npwp: archive.client.npwp ?? "",
+          tempatLahir: archive.client.tempatLahir ?? "",
+          tanggalLahir: archive.client.tanggalLahir?.toISOString().slice(0, 10) ?? "",
+          gender: archive.client.gender ?? "",
+          pekerjaan: archive.client.pekerjaan ?? "",
+          statusKawin: archive.client.statusKawin ?? "",
+          wargaNegara: archive.client.wargaNegara ?? "Indonesia",
+          address: archive.client.address ?? "",
+        }
+      : {};
     return {
       id: archive.id,
       label: `${archive.originalName} — ${archive.type.replaceAll("_", " ")}`,
-      values: buildArchivePrefill(extracted.fields ?? {}),
+      values: buildArchivePrefill({
+        ...(extracted.fields ?? {}),
+        ...(extracted.confirmedClientFields ?? {}),
+        ...currentClientFields,
+      }),
     };
   });
 

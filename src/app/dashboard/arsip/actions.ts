@@ -5,19 +5,13 @@ import { redirect } from "next/navigation";
 import { requireNotaris } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
-import { extractArchiveText } from "@/lib/archiveExtraction";
-import { parseArchiveText } from "@/lib/archiveParser";
 import {
-  deleteArchiveFile,
   finalizeQuarantinedArchive,
   quarantineArchiveFile,
   restoreQuarantinedArchive,
-  saveArchiveFile,
-  validateArchiveFile,
-  validateArchiveSignature,
 } from "@/lib/archiveStorage";
 import type { ArchiveTypeValue } from "@/lib/archiveTypes";
-import { acquireArchiveUploadLock } from "@/lib/archiveUploadLock";
+import { createArchiveFromFile } from "@/lib/archiveCreation";
 
 const validTypes = new Set<ArchiveTypeValue>([
   "KTP",
@@ -55,63 +49,20 @@ export async function uploadArchiveAction(formData: FormData) {
 
   const file = formData.get("file") as File | null;
   if (!(file instanceof File)) throw new Error("Pilih file yang akan dipindai.");
-  const releaseUpload = await acquireArchiveUploadLock();
-  let archiveId = "";
-  try {
-    validateArchiveFile(file);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    validateArchiveSignature(buffer, file.type);
-
-    const type = requestedType(formData);
-    const clientId = nullable(formData.get("clientId"));
-    const pekerjaanId = nullable(formData.get("pekerjaanId"));
-    await validateRelations(session.user.officeId, clientId, pekerjaanId);
-    const usage = await prisma.documentArchive.aggregate({
-      where: { officeId: session.user.officeId },
-      _count: { id: true },
-      _sum: { sizeBytes: true },
-    });
-    if (usage._count.id >= 500) throw new Error("Batas 500 arsip per kantor telah tercapai.");
-    if (Number(usage._sum.sizeBytes ?? 0) + file.size > 500 * 1024 * 1024) {
-      throw new Error("Kuota arsip kantor 500 MB telah tercapai.");
-    }
-
-    let stored: ReturnType<typeof saveArchiveFile> | null = null;
-    try {
-      stored = saveArchiveFile(session.user.officeId, file.name, file.type, buffer);
-      const rawText = await extractArchiveText(buffer, file.type);
-      const extracted = parseArchiveText(rawText, type);
-      const archive = await prisma.documentArchive.create({
-        data: {
-          officeId: session.user.officeId,
-          clientId,
-          pekerjaanId,
-          type: extracted.documentType,
-          status: "PERLU_REVIEW",
-          originalName: file.name.slice(0, 200),
-          storageKey: stored.storageKey,
-          mimeType: file.type,
-          sizeBytes: stored.sizeBytes,
-          checksum: stored.checksum,
-          rawText,
-          extractedJson: {
-            documentType: extracted.documentType,
-            confidence: extracted.confidence,
-            fields: extracted.fields,
-            warnings: extracted.warnings,
-          },
-        },
-      });
-      archiveId = archive.id;
-    } catch (error) {
-      if (stored) deleteArchiveFile(session.user.officeId, stored.storageKey);
-      throw error;
-    }
-  } finally {
-    releaseUpload();
-  }
+  const type = requestedType(formData);
+  const clientId = nullable(formData.get("clientId"));
+  const pekerjaanId = nullable(formData.get("pekerjaanId"));
+  await validateRelations(session.user.officeId, clientId, pekerjaanId);
+  const archive = await createArchiveFromFile({
+    officeId: session.user.officeId,
+    file,
+    type,
+    clientId,
+    pekerjaanId,
+    uploadedById: session.user.id,
+  });
   revalidatePath("/dashboard/arsip");
-  redirect(`/dashboard/arsip/${archiveId}`);
+  redirect(`/dashboard/arsip/${archive.id}`);
 }
 
 export async function updateArchiveReviewAction(id: string, formData: FormData) {
@@ -146,11 +97,12 @@ export async function updateArchiveReviewAction(id: string, formData: FormData) 
     throw new Error("Hasil ekstraksi tidak valid.");
   }
 
-  const previous = archive.extractedJson as { documentType?: string; confidence?: number; warnings?: string[] };
+  const previous = archive.extractedJson as Record<string, unknown>;
   await prisma.documentArchive.update({
     where: { id: archive.id },
     data: {
       extractedJson: {
+        ...previous,
         documentType: previous.documentType ?? "UMUM",
         confidence: previous.confidence ?? 0,
         warnings: previous.warnings ?? [],

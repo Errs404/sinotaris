@@ -8,7 +8,7 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { Avatar } from "@/components/Avatar";
 import { KlienForm } from "../KlienForm";
 import Link from "next/link";
-import { Briefcase } from "lucide-react";
+import { Briefcase, Download, Files } from "lucide-react";
 
 type ClientData = {
   id: string;
@@ -33,6 +33,8 @@ export function KlienDetailClient({
   updateAction,
   deleteAction,
   history,
+  documents,
+  canViewDocuments,
 }: {
   client: ClientData;
   updateAction: (formData: FormData) => Promise<void>;
@@ -45,6 +47,15 @@ export function KlienDetailClient({
     peran: string;
     tanggalAkta: string | null;
   }>;
+  documents: Array<{
+    id: string;
+    originalName: string;
+    type: string;
+    status: string;
+    sizeBytes: number;
+    createdAt: string;
+  }>;
+  canViewDocuments: boolean;
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -120,13 +131,37 @@ export function KlienDetailClient({
           </div>
         )}
       </div>
+
+      {canViewDocuments && (
+        <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
+          <div className="mb-4 flex items-center gap-2">
+            <Files className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <h3 className="font-semibold text-slate-800 dark:text-slate-100">Dokumen Klien</h3>
+          </div>
+          {documents.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">Belum ada KTP, KK, NPWP, atau dokumen lain yang tersimpan untuk Klien ini.</p>
+          ) : (
+            <div className="space-y-2">
+              {documents.map((document) => (
+                <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 px-4 py-3 dark:border-slate-700">
+                  <div>
+                    <Link href={`/dashboard/arsip/${document.id}`} className="font-medium text-slate-800 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-indigo-400">{document.originalName}</Link>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{document.type.replaceAll("_", " ")} · {(document.sizeBytes / 1024).toFixed(1)} KB · {new Date(document.createdAt).toLocaleDateString("id-ID")}</p>
+                  </div>
+                  <Link href={`/api/arsip/${document.id}/file`} className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-slate-600 dark:text-indigo-400 dark:hover:bg-slate-700"><Download className="h-3.5 w-3.5" /> Unduh</Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <KlienForm action={handleUpdate} client={client} submitLabel="Simpan Perubahan" />
       <ConfirmDialog
         open={showDelete}
         onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
         title="Hapus klien ini?"
-        description={`Data "${client.name}" akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.`}
+        description={`Data Klien "${client.name}" akan dihapus. Dokumen aslinya tetap disimpan di Arsip, dilepas dari Klien, dan harus direview ulang sebelum dapat digunakan.`}
       />
     </div>
   );

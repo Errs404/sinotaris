@@ -24,6 +24,13 @@ export default async function KlienDetailPage({
   });
 
   if (!client) notFound();
+  const archives = session!.user.role === "NOTARIS"
+    ? await prisma.documentArchive.findMany({
+        where: { officeId: session!.user.officeId, clientId: client.id },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, originalName: true, type: true, status: true, sizeBytes: true, createdAt: true },
+      })
+    : [];
 
   const updateWithId = updateClientAction.bind(null, client.id);
   const deleteWithId = deleteClientAction.bind(null, client.id);
@@ -39,6 +46,8 @@ export default async function KlienDetailPage({
         peran: item.peran,
         tanggalAkta: item.pekerjaan.tanggalAkta?.toISOString() ?? null,
       }))}
+      documents={archives.map((archive) => ({ ...archive, createdAt: archive.createdAt.toISOString() }))}
+      canViewDocuments={session!.user.role === "NOTARIS"}
       updateAction={updateWithId}
       deleteAction={deleteWithId}
     />

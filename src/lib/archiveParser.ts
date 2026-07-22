@@ -49,11 +49,11 @@ function detectType(text: string): ArchiveTypeValue {
 
 function parseKtp(text: string): Record<string, string> {
   const lines = normalizedLines(text);
-  const birth = lineValue(lines, ["Tempat/Tgl Lahir", "Tempat Tgl Lahir", "Tempat dan Tanggal Lahir"]);
+  const birth = lineValue(lines, ["Tempat/Tgl Lahir", "Tempat Tgl Lahir", "Tempat dan Tanggal Lahir", "Place/Date of Birth", "Place Date of Birth"]);
   const birthParts = birth.match(/^(.+?)[,\s]+(\d{1,2}[\s./-]\d{1,2}[\s./-]\d{4})$/);
-  const genderRaw = lineValue(lines, ["Jenis Kelamin"]);
+  const genderRaw = lineValue(lines, ["Jenis Kelamin", "Sex"]);
   const addressParts = [
-    lineValue(lines, ["Alamat"]),
+    lineValue(lines, ["Alamat", "Address"]),
     lineValue(lines, ["RT/RW", "RT RW"]),
     lineValue(lines, ["Kel/Desa", "Kelurahan/Desa", "Kelurahan"]),
     lineValue(lines, ["Kecamatan"]),
@@ -61,7 +61,7 @@ function parseKtp(text: string): Record<string, string> {
 
   return {
     nik: match(text, /\bNIK\s*[:;]?\s*([0-9OIl\s-]{16,22})/i).replace(/[O]/gi, "0").replace(/[Il]/g, "1").replace(/\D/g, "").slice(0, 16),
-    name: lineValue(lines, ["Nama"]),
+    name: lineValue(lines, ["Nama", "Name"]),
     tempatLahir: clean(birthParts?.[1] ?? birth),
     tanggalLahir: normalizeDate(clean(birthParts?.[2])),
     gender: /PEREMPUAN|WANITA/i.test(genderRaw) ? "Nyonya" : /LAKI/i.test(genderRaw) ? "Tuan" : genderRaw,
@@ -69,9 +69,9 @@ function parseKtp(text: string): Record<string, string> {
     rtRw: lineValue(lines, ["RT/RW", "RT RW"]),
     kelurahan: lineValue(lines, ["Kel/Desa", "Kelurahan/Desa", "Kelurahan"]),
     kecamatan: lineValue(lines, ["Kecamatan"]),
-    statusKawin: lineValue(lines, ["Status Perkawinan", "Status Kawin"]),
-    pekerjaan: lineValue(lines, ["Pekerjaan"]),
-    wargaNegara: lineValue(lines, ["Kewarganegaraan"]) || "Indonesia",
+    statusKawin: lineValue(lines, ["Status Perkawinan", "Status Kawin", "Marital Status"]),
+    pekerjaan: lineValue(lines, ["Pekerjaan", "Occupation"]),
+    wargaNegara: lineValue(lines, ["Kewarganegaraan", "Citizenship"]) || "Indonesia",
     provinsi: lineValue(lines, ["Provinsi"]),
     kabupaten: lineValue(lines, ["Kabupaten", "Kota"]),
   };

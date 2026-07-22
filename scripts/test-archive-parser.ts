@@ -15,6 +15,23 @@ assert.equal(ktp.fields.nik, "1234567890123456");
 assert.equal(ktp.fields.name, "BUDI SANTOSO");
 assert.equal(ktp.fields.tanggalLahir, "1988-06-05");
 
+const oldKtp = parseArchiveText(`NIK : 1234567890123456
+Name : CONTOH LAMA
+Place/Date of Birth : MAGELANG, 05-06-1988
+Sex : PEREMPUAN
+Address : DUSUN CONTOH
+Marital Status : KAWIN
+Occupation : PETANI
+Citizenship : WNI
+Berlaku Hingga : SEUMUR HIDUP`, "KTP");
+assert.equal(oldKtp.fields.name, "CONTOH LAMA");
+assert.equal(oldKtp.fields.tanggalLahir, "1988-06-05");
+assert.equal(oldKtp.fields.gender, "Nyonya");
+assert.equal(oldKtp.fields.address, "DUSUN CONTOH");
+assert.equal(oldKtp.fields.statusKawin, "KAWIN");
+assert.equal(oldKtp.fields.pekerjaan, "PETANI");
+assert.equal(oldKtp.fields.wargaNegara, "WNI");
+
 const npwp = parseArchiveText(`NOMOR POKOK WAJIB PAJAK
 NPWP : 12.345.678.9-012.345
 Nama Wajib Pajak: BUDI SANTOSO

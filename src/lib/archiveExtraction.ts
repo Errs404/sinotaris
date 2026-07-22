@@ -1,7 +1,7 @@
 import mammoth from "mammoth";
 import "pdf-parse/worker";
 import { PDFParse } from "pdf-parse";
-import { createWorker } from "tesseract.js";
+import { createWorker, PSM } from "tesseract.js";
 import path from "path";
 import PizZip from "pizzip";
 import { imageSize } from "image-size";
@@ -90,7 +90,7 @@ function documentStructureScore(text: string): number {
     "NPWP", "SERTIPIKAT", "SURAT UKUR", "NIB", "AKTA", "NOMOR",
   ];
   const labelScore = labels.filter((label) => upper.includes(label)).length * 10;
-  const digitScore = (upper.replace(/\D/g, "").match(/\d{15,16}/g)?.length ?? 0) * 4;
+  const digitScore = (text.match(/\b\d{15,16}\b/g)?.length ?? 0) * 30;
   return labelScore + digitScore + Math.min(20, Math.floor(text.length / 100));
 }
 
@@ -106,6 +106,26 @@ async function rotatePng(buffer: Buffer, degrees: 90 | 270): Promise<Buffer> {
   return canvas.toBuffer("image/png");
 }
 
+async function enhanceIdentityDocument(buffer: Buffer): Promise<Buffer> {
+  const dimensions = imageSize(buffer);
+  assertPixelLimit(dimensions.width ?? 0, dimensions.height ?? 0, MAX_IMAGE_PIXELS, "Resolusi halaman terlalu besar untuk ditingkatkan.");
+  const image = await loadImage(buffer);
+  const canvas = createCanvas(image.width, image.height);
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0);
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = imageData.data;
+  for (let index = 0; index < pixels.length; index += 4) {
+    const gray = 0.299 * pixels[index] + 0.587 * pixels[index + 1] + 0.114 * pixels[index + 2];
+    const contrasted = Math.max(0, Math.min(255, (gray - 128) * 1.8 + 150));
+    pixels[index] = contrasted;
+    pixels[index + 1] = contrasted;
+    pixels[index + 2] = contrasted;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas.toBuffer("image/png");
+}
+
 async function extractBestOrientedPage(buffer: Buffer, width: number, height: number, deadline: number): Promise<string> {
   const rotations: Array<0 | 90 | 270> = height > width * 1.2 ? [90, 0, 270] : [0, 90, 270];
   let best = "";
@@ -118,7 +138,17 @@ async function extractBestOrientedPage(buffer: Buffer, width: number, height: nu
       best = text;
       bestScore = score;
     }
-    if (bestScore >= 60) break;
+    if (score >= 30 && score < 90 && !/\b\d{15,16}\b/.test(text)) {
+      const enhanced = await enhanceIdentityDocument(image);
+      const enhancedText = await runOcrQueued(enhanced, deadline, PSM.SINGLE_BLOCK);
+      const combined = `${text}\n${enhancedText}`;
+      const combinedScore = documentStructureScore(combined);
+      if (combinedScore > bestScore) {
+        best = combined;
+        bestScore = combinedScore;
+      }
+    }
+    if (bestScore >= 90) break;
   }
   return best;
 }
@@ -143,7 +173,7 @@ async function extractPdf(buffer: Buffer): Promise<string> {
       deadline,
       "Pemeriksaan dimensi PDF melebihi batas waktu 3 menit.",
     );
-    const desiredWidth = 2600;
+    const desiredWidth = 3000;
     for (const page of info.pages) {
       const projectedHeight = desiredWidth * (page.height / page.width);
       assertPixelLimit(desiredWidth, projectedHeight, MAX_PDF_RENDER_PIXELS, "Dimensi halaman PDF terlalu ekstrem untuk diproses OCR.");
@@ -181,7 +211,7 @@ async function extractDocx(buffer: Buffer): Promise<string> {
   return capText(result.value);
 }
 
-async function extractImage(buffer: Buffer, deadline = Date.now() + 120_000): Promise<string> {
+async function extractImage(buffer: Buffer, deadline = Date.now() + 120_000, pageSegMode?: PSM): Promise<string> {
   if (remainingTime(deadline) <= 0) throw new Error("Batas waktu pemrosesan dokumen telah habis.");
   const dimensions = imageSize(buffer);
   if (!dimensions.width || !dimensions.height) throw new Error("Dimensi gambar tidak dapat dibaca.");
@@ -209,6 +239,12 @@ async function extractImage(buffer: Buffer, deadline = Date.now() + 120_000): Pr
   ]).finally(() => {
     if (initTimer) clearTimeout(initTimer);
   });
+  if (pageSegMode) {
+    await worker.setParameters({
+      tessedit_pageseg_mode: pageSegMode,
+      preserve_interword_spaces: "1",
+    });
+  }
   let timer: ReturnType<typeof setTimeout> | null = null;
   let timedOut = false;
   try {
@@ -239,8 +275,8 @@ async function extractImage(buffer: Buffer, deadline = Date.now() + 120_000): Pr
   }
 }
 
-function runOcrQueued(buffer: Buffer, deadline = Date.now() + 120_000): Promise<string> {
-  const result = ocrQueue.then(() => extractImage(buffer, deadline));
+function runOcrQueued(buffer: Buffer, deadline = Date.now() + 120_000, pageSegMode?: PSM): Promise<string> {
+  const result = ocrQueue.then(() => extractImage(buffer, deadline, pageSegMode));
   ocrQueue = result.then(() => undefined, () => undefined);
   return result;
 }

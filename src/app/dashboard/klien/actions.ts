@@ -18,7 +18,8 @@ function clientDataFromForm(formData: FormData) {
   return {
     type: (str("type") === "BADAN_HUKUM" ? "BADAN_HUKUM" : "PERORANGAN") as "PERORANGAN" | "BADAN_HUKUM",
     name: String(formData.get("name") ?? "").trim(),
-    nik: str("nik"),
+    nik: str("nik")?.replace(/\D/g, "") || null,
+    nomorKk: str("nomorKk")?.replace(/\D/g, "") || null,
     npwp: str("npwp"),
     tempatLahir: str("tempatLahir"),
     tanggalLahir: tanggalLahirRaw ? new Date(tanggalLahirRaw) : null,
@@ -31,6 +32,11 @@ function clientDataFromForm(formData: FormData) {
     email: str("email"),
     notes: str("notes"),
   };
+}
+
+function validateClientIdentity(data: ReturnType<typeof clientDataFromForm>) {
+  if (data.nik && !/^\d{16}$/.test(data.nik)) throw new Error("NIK harus terdiri dari 16 digit.");
+  if (data.nomorKk && !/^\d{16}$/.test(data.nomorKk)) throw new Error("Nomor KK harus terdiri dari 16 digit.");
 }
 
 function archiveIdsFromForm(formData: FormData): string[] {
@@ -62,9 +68,7 @@ export async function createClientAction(formData: FormData) {
 
   const data = clientDataFromForm(formData);
   if (!data.name) throw new Error("Nama klien wajib diisi.");
-  if (data.nik && !/^\d{16}$/.test(data.nik.replace(/\D/g, ""))) {
-    throw new Error("NIK harus terdiri dari 16 digit.");
-  }
+  validateClientIdentity(data);
   const archiveIds = archiveIdsFromForm(formData);
   const conflictResolutions = conflictResolutionsFromForm(formData);
   if (archiveIds.length && session.user.role !== "NOTARIS") {
@@ -94,6 +98,7 @@ export async function createClientAction(formData: FormData) {
     const confirmedFields: Record<string, string> = {
       name: data.name,
       nik: data.nik ?? "",
+      nomorKk: data.nomorKk ?? "",
       npwp: data.npwp ?? "",
       tempatLahir: data.tempatLahir ?? "",
       tanggalLahir: data.tanggalLahir?.toISOString().slice(0, 10) ?? "",
@@ -167,6 +172,7 @@ export async function updateClientAction(id: string, formData: FormData) {
 
   const data = clientDataFromForm(formData);
   if (!data.name) throw new Error("Nama klien wajib diisi.");
+  validateClientIdentity(data);
 
   await prisma.client.update({
     where: { id, officeId: session.user.officeId },

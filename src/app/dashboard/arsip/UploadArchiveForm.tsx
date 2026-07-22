@@ -43,7 +43,7 @@ export function UploadArchiveForm({
       </div>
       <div className="mb-4 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>PDF hasil scan belum dapat di-OCR per halaman. Untuk dokumen scan, unggah halaman sebagai JPG, PNG, atau WEBP.</p>
+        <p>PDF hasil scan hingga 3 halaman akan dirender dan diproses OCR lokal secara otomatis. Dokumen padat seperti KK dapat memerlukan sekitar 10–30 detik.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>

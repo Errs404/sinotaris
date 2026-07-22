@@ -38,6 +38,7 @@ const initialValues: ClientValues = {
   type: "PERORANGAN",
   name: "",
   nik: "",
+  nomorKk: "",
   npwp: "",
   tempatLahir: "",
   tanggalLahir: "",
@@ -52,7 +53,7 @@ const initialValues: ClientValues = {
 };
 
 const labels: Record<ClientField, string> = {
-  name: "Nama Lengkap", nik: "NIK", npwp: "NPWP", tempatLahir: "Tempat Lahir",
+  name: "Nama Lengkap", nik: "NIK", nomorKk: "Nomor KK", npwp: "NPWP", tempatLahir: "Tempat Lahir",
   tanggalLahir: "Tanggal Lahir", gender: "Sapaan", pekerjaan: "Pekerjaan",
   statusKawin: "Status Kawin", wargaNegara: "Warga Negara", address: "Alamat",
   phone: "Telepon / WA", email: "Email", notes: "Catatan",
@@ -209,7 +210,7 @@ export function NewClientForm({ action, canScan }: { action: (formData: FormData
       <form action={action} className="space-y-6">
         <input type="hidden" name="archiveIdsJson" value={archiveIdsJson} />
         <input type="hidden" name="conflictResolutionsJson" value={decisionsJson} />
-        <section className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800"><h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Utama</h3><div className="grid gap-4 sm:grid-cols-2"><Select label="Tipe Klien" name="type" value={values.type} onChange={(value) => setValue("type", value)} options={[["PERORANGAN","Perorangan"],["BADAN_HUKUM","Badan Hukum"]]} /><Input label="Nama Lengkap" name="name" value={values.name} onChange={(value) => setValue("name", value)} required /><Input label="NIK" name="nik" value={values.nik} onChange={(value) => setValue("nik", value)} /><Input label="NPWP" name="npwp" value={values.npwp} onChange={(value) => setValue("npwp", value)} /><Select label="Sapaan" name="gender" value={values.gender} onChange={(value) => setValue("gender", value)} options={[["","-"],["Tuan","Tuan"],["Nyonya","Nyonya"],["Nona","Nona"]]} /><Input label="Warga Negara" name="wargaNegara" value={values.wargaNegara} onChange={(value) => setValue("wargaNegara", value)} /></div></section>
+        <section className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800"><h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Utama</h3><div className="grid gap-4 sm:grid-cols-2"><Select label="Tipe Klien" name="type" value={values.type} onChange={(value) => setValue("type", value)} options={[["PERORANGAN","Perorangan"],["BADAN_HUKUM","Badan Hukum"]]} /><Input label="Nama Lengkap" name="name" value={values.name} onChange={(value) => setValue("name", value)} required /><Input label="NIK" name="nik" value={values.nik} onChange={(value) => setValue("nik", value)} /><Input label="Nomor KK" name="nomorKk" value={values.nomorKk} onChange={(value) => setValue("nomorKk", value)} /><Input label="NPWP" name="npwp" value={values.npwp} onChange={(value) => setValue("npwp", value)} /><Select label="Sapaan" name="gender" value={values.gender} onChange={(value) => setValue("gender", value)} options={[["","-"],["Tuan","Tuan"],["Nyonya","Nyonya"],["Nona","Nona"]]} /><Input label="Warga Negara" name="wargaNegara" value={values.wargaNegara} onChange={(value) => setValue("wargaNegara", value)} /></div></section>
         <section className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800"><h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Kelahiran & Status</h3><div className="grid gap-4 sm:grid-cols-2"><Input label="Tempat Lahir" name="tempatLahir" value={values.tempatLahir} onChange={(value) => setValue("tempatLahir", value)} /><Input label="Tanggal Lahir" name="tanggalLahir" type="date" value={values.tanggalLahir} onChange={(value) => setValue("tanggalLahir", value)} /><Input label="Pekerjaan" name="pekerjaan" value={values.pekerjaan} onChange={(value) => setValue("pekerjaan", value)} /><Select label="Status Kawin" name="statusKawin" value={values.statusKawin} onChange={(value) => setValue("statusKawin", value)} options={[["","-"],["Belum Kawin","Belum Kawin"],["Kawin","Kawin"],["Cerai Hidup","Cerai Hidup"],["Cerai Mati","Cerai Mati"]]} /></div></section>
         <section className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800"><h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Kontak</h3><div className="grid gap-4 sm:grid-cols-2"><Input label="Telepon / WA" name="phone" value={values.phone} onChange={(value) => setValue("phone", value)} /><Input label="Email" name="email" type="email" value={values.email} onChange={(value) => setValue("email", value)} /></div><div className="mt-4 space-y-4"><Textarea label="Alamat" name="address" value={values.address} onChange={(value) => setValue("address", value)} /><Textarea label="Catatan" name="notes" value={values.notes} onChange={(value) => setValue("notes", value)} /></div></section>
         <PendingButton disabled={isScanning || cancellingId !== "" || conflicts.length > 0} pendingLabel="Menyimpan Klien..." className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700">{canScan ? "Simpan Klien dan Dokumen" : "Simpan Klien"}</PendingButton>

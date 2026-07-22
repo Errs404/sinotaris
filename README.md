@@ -69,7 +69,7 @@ Pengembangan lanjutan dari [skmht-generator](https://github.com/Errs404/skmht-ge
 
 - Mendukung PDF digital, DOCX, JPG, PNG, dan WEBP (maksimal 15 MB).
 - OCR gambar memakai Tesseract.js dengan model Bahasa Indonesia yang dibundel lokal; file tidak dikirim ke layanan cloud.
-- PDF hasil scan belum dirender per halaman. Simpan/unggah halaman sebagai JPG/PNG agar diproses OCR.
+- PDF hasil scan hingga 3 halaman dirender dan diproses OCR lokal secara otomatis, termasuk deteksi orientasi 0°/90°/270°. Untuk dokumen lebih panjang, pisahkan halaman yang diperlukan.
 - Hasil ekstraksi selalu berstatus **Perlu Review**. Setelah dikoreksi dan disimpan, status menjadi **Dikonfirmasi** dan baru dapat digunakan sebagai sumber generator dokumen.
 - Modul arsip hanya dapat diakses role **NOTARIS** pada versi awal.
 - File asli disimpan di `storage/archives/<officeId>/` dan metadata/hasil ekstraksi disimpan di PostgreSQL.

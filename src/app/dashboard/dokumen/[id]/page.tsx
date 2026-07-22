@@ -55,6 +55,7 @@ export default async function TemplateDetailPage({
             select: {
               name: true,
               nik: true,
+              nomorKk: true,
               npwp: true,
               tempatLahir: true,
               tanggalLahir: true,
@@ -77,6 +78,7 @@ export default async function TemplateDetailPage({
       ? {
           name: archive.client.name,
           nik: archive.client.nik ?? "",
+          nomorKk: archive.client.nomorKk ?? "",
           npwp: archive.client.npwp ?? "",
           tempatLahir: archive.client.tempatLahir ?? "",
           tanggalLahir: archive.client.tanggalLahir?.toISOString().slice(0, 10) ?? "",

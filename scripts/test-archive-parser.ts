@@ -22,6 +22,15 @@ Alamat: DUSUN CONTOH`, "NPWP");
 assert.equal(npwp.fields.name, "BUDI SANTOSO");
 assert.equal(npwp.fields.npwp, "123456789012345");
 
+const kk = parseArchiveText(`KARTU KELUARGA
+NO. 1234567890123456
+Nama Kepala Keluarga: CONTOH KELUARGA
+Alamat: DUSUN CONTOH
+Kecamatan: CONTOH
+Provinsi: JAWA TENGAH`, "KARTU_KELUARGA");
+assert.equal(kk.fields.nomorKk, "1234567890123456");
+assert.equal(kk.fields.name, "CONTOH KELUARGA");
+
 const certificate = parseArchiveText(`SERTIPIKAT
 HAK MILIK NOMOR 01234/DESA-CONTOH
 Pemegang Hak: BUDI SANTOSO

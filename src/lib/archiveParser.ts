@@ -23,9 +23,9 @@ function normalizedLines(text: string): string[] {
 function lineValue(lines: string[], labels: string[]): string {
   for (const line of lines) {
     for (const label of labels) {
-      const pattern = new RegExp(`^${label}\\s*[:;]?\\s*(.+)$`, "i");
+      const pattern = new RegExp(`(?:^|\\b)${label}\\s*[:;]?\\s*(.+)$`, "i");
       const result = line.match(pattern)?.[1];
-      if (result) return clean(result);
+      if (result) return clean(result.split("|")[0]);
     }
   }
   return "";
@@ -89,7 +89,7 @@ function parseNpwp(text: string): Record<string, string> {
 function parseKk(text: string): Record<string, string> {
   const lines = normalizedLines(text);
   return {
-    nomorKk: match(text, /(?:NO\.?\s*KK|NOMOR KARTU KELUARGA|NO)\s*[:;]?\s*([0-9OIl\s-]{16,22})/i).replace(/[O]/gi, "0").replace(/[Il]/g, "1").replace(/\D/g, "").slice(0, 16),
+    nomorKk: match(text, /(?:NO\.?\s*KK|NOMOR KARTU KELUARGA|NO\.?)\s*[:;]?\s*([0-9OIl\s-]{16,22})/i).replace(/[O]/gi, "0").replace(/[Il]/g, "1").replace(/\D/g, "").slice(0, 16),
     name: lineValue(lines, ["Nama Kepala Keluarga"]),
     address: lineValue(lines, ["Alamat"]),
     rtRw: lineValue(lines, ["RT/RW", "RT RW"]),

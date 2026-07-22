@@ -94,6 +94,7 @@ model Client {
   type         ClientType @default(PERORANGAN)
   name         String
   nik          String? // 16 digit, untuk perorangan
+  nomorKk      String? // 16 digit, opsional dari Kartu Keluarga
   npwp         String?
   tempatLahir  String?
   tanggalLahir DateTime?

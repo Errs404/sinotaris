@@ -1,6 +1,7 @@
 export const clientScanFields = [
   "name",
   "nik",
+  "nomorKk",
   "npwp",
   "tempatLahir",
   "tanggalLahir",

@@ -4,6 +4,7 @@ type ClientLike = {
   type?: string | null;
   name?: string | null;
   nik?: string | null;
+  nomorKk?: string | null;
   npwp?: string | null;
   tempatLahir?: string | null;
   tanggalLahir?: Date | null;
@@ -46,6 +47,7 @@ export function KlienForm({
           />
           <Field label="Nama Lengkap" name="name" defaultValue={client?.name} required placeholder="Sesuai KTP / akta pendirian" />
           <Field label="NIK" name="nik" defaultValue={client?.nik} placeholder="16 digit" />
+          <Field label="Nomor KK" name="nomorKk" defaultValue={client?.nomorKk} placeholder="16 digit" />
           <Field label="NPWP" name="npwp" defaultValue={client?.npwp} />
           <SelectField
             label="Sapaan"

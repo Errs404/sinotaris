@@ -136,6 +136,14 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
     throw new Error("Hasil review tidak valid.");
   }
   if (!fields.name) throw new Error("Nama wajib dikoreksi sebelum membuat klien.");
+  if (fields.nik) {
+    fields.nik = fields.nik.replace(/\D/g, "");
+    if (!/^\d{16}$/.test(fields.nik)) throw new Error("NIK harus terdiri dari 16 digit.");
+  }
+  if (fields.nomorKk) {
+    fields.nomorKk = fields.nomorKk.replace(/\D/g, "");
+    if (!/^\d{16}$/.test(fields.nomorKk)) throw new Error("Nomor KK harus terdiri dari 16 digit.");
+  }
 
   const existingClientId = nullable(formData.get("existingClientId"));
   if (existingClientId) {
@@ -148,6 +156,7 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
         data: {
           name: fields.name || existing.name,
           nik: fields.nik || existing.nik,
+          nomorKk: fields.nomorKk || existing.nomorKk,
           npwp: fields.npwp || existing.npwp,
           tempatLahir: fields.tempatLahir || existing.tempatLahir,
           tanggalLahir: dateOrNull(fields.tanggalLahir) || existing.tanggalLahir,
@@ -175,6 +184,7 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
           type: "PERORANGAN",
           name: fields.name,
           nik: fields.nik || null,
+          nomorKk: fields.nomorKk || null,
           npwp: fields.npwp || null,
           tempatLahir: fields.tempatLahir || null,
           tanggalLahir: dateOrNull(fields.tanggalLahir),

@@ -51,3 +51,6 @@ next-env.d.ts
 dev-server.log
 dev-server-dark.log
 server-*.log
+
+.playwright-mcp
+graphify-out

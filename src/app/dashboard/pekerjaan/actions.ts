@@ -6,6 +6,7 @@ import { requireSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
 import { createAuditLog } from "@/lib/audit";
+import { createPekerjaanForActor, validatePekerjaanParties } from "@/lib/pekerjaanService";
 
 interface PartyInput {
   clientId: string;
@@ -48,41 +49,6 @@ function partiesFromForm(formData: FormData): PartyInput[] {
     unique.set(`${clientId}:${peran.toLowerCase()}`, { clientId, peran });
   }
   return [...unique.values()];
-}
-
-async function validateParties(officeId: string, parties: PartyInput[]) {
-  if (parties.length === 0) return;
-  const clientIds = [...new Set(parties.map((party) => party.clientId))];
-  const count = await prisma.client.count({
-    where: { id: { in: clientIds }, officeId },
-  });
-  if (count !== clientIds.length) {
-    throw new Error("Salah satu klien tidak ditemukan atau berasal dari kantor lain.");
-  }
-
-  const singularRoles = [
-    "pemberikuasa",
-    "penerimakuasa",
-    "debitor",
-    "debitur",
-    "kreditor",
-    "pasangan",
-    "suamiistri",
-    "saksi1",
-    "saksisatu",
-    "saksi2",
-    "saksidua",
-  ];
-  const seen = new Set<string>();
-  for (const party of parties) {
-    const normalized = party.peran.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const singular = singularRoles.find((role) => normalized.includes(role));
-    if (!singular) continue;
-    if (seen.has(singular)) {
-      throw new Error(`Peran "${party.peran}" hanya boleh dipakai oleh satu klien.`);
-    }
-    seen.add(singular);
-  }
 }
 
 function pekerjaanDataFromForm(formData: FormData) {
@@ -136,30 +102,11 @@ export async function createPekerjaanAction(formData: FormData) {
   const data = pekerjaanDataFromForm(formData);
   const parties = partiesFromForm(formData);
   if (!data.jenis || !data.judul) throw new Error("Jenis dan judul pekerjaan wajib diisi.");
-  await validateParties(session.user.officeId, parties);
-
   // Staf tidak boleh mengisi honorarium
   if (session.user.role !== "NOTARIS") data.honorarium = null;
 
   await prisma.$transaction(async (tx) => {
-    const pekerjaan = await tx.pekerjaan.create({
-      data: {
-        ...data,
-        officeId: session.user.officeId,
-        clients: {
-          create: parties.map((party) => ({ clientId: party.clientId, peran: party.peran })),
-        },
-      },
-      select: { id: true, kind: true, status: true },
-    });
-    await createAuditLog(tx, {
-      officeId: session.user.officeId,
-      actorId: session.user.id,
-      action: "PEKERJAAN_CREATE",
-      targetType: "PEKERJAAN",
-      targetId: pekerjaan.id,
-      metadata: { kind: pekerjaan.kind, status: pekerjaan.status, partyCount: parties.length },
-    });
+    await createPekerjaanForActor(tx, session.user, data, parties);
   });
 
   revalidatePath("/dashboard/pekerjaan");
@@ -173,9 +120,8 @@ export async function updatePekerjaanAction(id: string, formData: FormData) {
   const data = pekerjaanDataFromForm(formData);
   const parties = partiesFromForm(formData);
   if (!data.jenis || !data.judul) throw new Error("Jenis dan judul pekerjaan wajib diisi.");
-  await validateParties(session.user.officeId, parties);
-
   await prisma.$transaction(async (tx) => {
+    await validatePekerjaanParties(tx, session.user.officeId, parties);
     const existing = await tx.pekerjaan.findFirst({
       where: { id, officeId: session.user.officeId },
       select: {

@@ -3,15 +3,14 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { readArchiveFile } from "@/lib/archiveStorage";
 import { createAuditLog } from "@/lib/audit";
+import { findOwnedArchive } from "@/lib/archiveAccess";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return new NextResponse("Belum login.", { status: 401 });
   if (session.user.role !== "NOTARIS") return new NextResponse("Akses ditolak.", { status: 403 });
   const { id } = await params;
-  const archive = await prisma.documentArchive.findFirst({
-    where: { id, officeId: session.user.officeId },
-  });
+  const archive = await findOwnedArchive(prisma, session.user.officeId, id);
   if (!archive) return new NextResponse("Arsip tidak ditemukan.", { status: 404 });
   let buffer: Buffer;
   try {

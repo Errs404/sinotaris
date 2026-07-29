@@ -9,6 +9,7 @@ import {
 } from "@/lib/archiveStorage";
 import { acquireArchiveUploadLock } from "@/lib/archiveUploadLock";
 import type { ArchiveTypeValue, ExtractedArchiveData } from "@/lib/archiveTypes";
+import { createAuditLog } from "@/lib/audit";
 
 export async function createArchiveFromFile({
   officeId,
@@ -44,29 +45,50 @@ export async function createArchiveFromFile({
     let stored: ReturnType<typeof saveArchiveFile> | null = null;
     try {
       stored = saveArchiveFile(officeId, file.name, file.type, buffer);
+      const saved = stored;
       const rawText = await extractArchiveText(buffer, file.type);
       const extracted = parseArchiveText(rawText, type);
-      const archive = await prisma.documentArchive.create({
-        data: {
-          officeId,
-          clientId,
-          pekerjaanId,
-          uploadedById,
-          type: extracted.documentType,
-          status: "PERLU_REVIEW",
-          originalName: file.name.slice(0, 200),
-          storageKey: stored.storageKey,
-          mimeType: file.type,
-          sizeBytes: stored.sizeBytes,
-          checksum: stored.checksum,
-          rawText,
-          extractedJson: {
-            documentType: extracted.documentType,
-            confidence: extracted.confidence,
-            fields: extracted.fields,
-            warnings: extracted.warnings,
+      const archive = await prisma.$transaction(async (tx) => {
+        const created = await tx.documentArchive.create({
+          data: {
+            officeId,
+            clientId,
+            pekerjaanId,
+            uploadedById,
+            type: extracted.documentType,
+            status: "PERLU_REVIEW",
+            originalName: file.name.slice(0, 200),
+            storageKey: saved.storageKey,
+            mimeType: file.type,
+            sizeBytes: saved.sizeBytes,
+            checksum: saved.checksum,
+            rawText,
+            extractedJson: {
+              documentType: extracted.documentType,
+              confidence: extracted.confidence,
+              fields: extracted.fields,
+              warnings: extracted.warnings,
+            },
           },
-        },
+        });
+        await createAuditLog(tx, {
+          officeId,
+          actorId: uploadedById,
+          action: "ARCHIVE_UPLOAD",
+          targetType: "DOCUMENT_ARCHIVE",
+          targetId: created.id,
+          metadata: {
+            documentType: created.type,
+            status: created.status,
+            mimeType: created.mimeType,
+            mimeCategory: created.mimeType.split("/", 1)[0] || "unknown",
+            byteCount: created.sizeBytes,
+            checksum: created.checksum,
+            hasClient: created.clientId !== null,
+            hasPekerjaan: created.pekerjaanId !== null,
+          },
+        });
+        return created;
       });
       return { id: archive.id, originalName: archive.originalName, mimeType: archive.mimeType, extracted };
     } catch (error) {

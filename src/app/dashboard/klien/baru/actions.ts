@@ -6,6 +6,7 @@ import { createArchiveFromFile } from "@/lib/archiveCreation";
 import type { ArchiveTypeValue } from "@/lib/archiveTypes";
 import { finalizeQuarantinedArchive, quarantineArchiveFile, restoreQuarantinedArchive } from "@/lib/archiveStorage";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 const clientDocumentTypes = new Set<ArchiveTypeValue>(["KTP", "KARTU_KELUARGA", "NPWP", "UMUM"]);
 
@@ -51,23 +52,31 @@ export async function cancelClientScanAction(archiveId: string) {
   if (!archive) throw new Error("Scan tidak tersedia atau sudah digunakan.");
   const quarantined = quarantineArchiveFile(session.user.officeId, archive.storageKey);
   try {
-    const deleted = await prisma.documentArchive.deleteMany({
-      where: {
-        id: archive.id,
+    await prisma.$transaction(async (tx) => {
+      const deleted = await tx.documentArchive.deleteMany({
+        where: {
+          id: archive.id,
+          officeId: session.user.officeId,
+          uploadedById: session.user.id,
+          clientId: null,
+          status: "PERLU_REVIEW",
+        },
+      });
+      if (deleted.count !== 1) {
+        throw new Error("Scan sedang digunakan proses lain dan tidak dapat dibatalkan.");
+      }
+      await createAuditLog(tx, {
         officeId: session.user.officeId,
-        uploadedById: session.user.id,
-        clientId: null,
-        status: "PERLU_REVIEW",
-      },
+        actorId: session.user.id,
+        action: "ARCHIVE_CANCEL_SCAN",
+        targetType: "DOCUMENT_ARCHIVE",
+        targetId: archive.id,
+        metadata: { databaseDeleted: true, fileDeletePending: true },
+      });
     });
-    if (deleted.count !== 1) {
-      restoreQuarantinedArchive(quarantined);
-      throw new Error("Scan sedang digunakan proses lain dan tidak dapat dibatalkan.");
-    }
-    finalizeQuarantinedArchive(quarantined);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("sedang digunakan")) throw error;
     restoreQuarantinedArchive(quarantined);
     throw error;
   }
+  finalizeQuarantinedArchive(quarantined);
 }

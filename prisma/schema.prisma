@@ -34,6 +34,7 @@ model Office {
   reminders     Reminder[]
   templates     DocTemplate[]
   archives      DocumentArchive[]
+  auditLogs     AuditLog[]
 }
 
 enum UserRole {
@@ -54,6 +55,49 @@ model User {
   updatedAt        DateTime          @updatedAt
   generatedDocs    GeneratedDoc[]
   uploadedArchives DocumentArchive[] @relation("ArchiveUploadedBy")
+}
+
+enum AuditAction {
+  CLIENT_CREATE
+  CLIENT_UPDATE
+  CLIENT_DELETE
+  PEKERJAAN_CREATE
+  PEKERJAAN_UPDATE
+  PEKERJAAN_DELETE
+  ARCHIVE_UPLOAD
+  ARCHIVE_REVIEW
+  ARCHIVE_CONFIRM
+  ARCHIVE_RELATION_UPDATE
+  ARCHIVE_DELETE
+  ARCHIVE_CANCEL_SCAN
+  ARCHIVE_PREVIEW
+  ARCHIVE_DOWNLOAD
+  GENERATED_DOC_CREATE
+}
+
+enum AuditTargetType {
+  CLIENT
+  PEKERJAAN
+  DOCUMENT_ARCHIVE
+  GENERATED_DOC
+}
+
+model AuditLog {
+  id         String          @id @default(cuid())
+  officeId   String
+  office     Office          @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  actorId    String?
+  actorRole  String
+  action     AuditAction
+  targetType AuditTargetType
+  targetId   String?
+  metadata   Json
+  createdAt  DateTime        @default(now())
+
+  @@index([officeId, createdAt])
+  @@index([officeId, action, createdAt])
+  @@index([officeId, targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 // ===== Subscription =====

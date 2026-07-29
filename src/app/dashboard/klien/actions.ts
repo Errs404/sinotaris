@@ -6,6 +6,15 @@ import { requireSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
 import { clientScanFields, normalizeClientScanValue, sameClientScanValue } from "@/lib/clientScanFields";
+import { createAuditLog } from "@/lib/audit";
+
+function persistedValuesEqual(previous: unknown, next: unknown): boolean {
+  if (previous == null || next == null) return previous == null && next == null;
+  if (previous instanceof Date || next instanceof Date) {
+    return previous instanceof Date && next instanceof Date && previous.getTime() === next.getTime();
+  }
+  return previous === next;
+}
 
 function clientDataFromForm(formData: FormData) {
   const str = (key: string) => {
@@ -159,7 +168,23 @@ export async function createClientAction(formData: FormData) {
           },
         },
       });
+      await createAuditLog(tx, {
+        officeId: session.user.officeId,
+        actorId: session.user.id,
+        action: "ARCHIVE_CONFIRM",
+        targetType: "DOCUMENT_ARCHIVE",
+        targetId: archive.id,
+        metadata: { documentType: archive.type, status: "DIKONFIRMASI", clientId: client.id, createdClient: true },
+      });
     }
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "CLIENT_CREATE",
+      targetType: "CLIENT",
+      targetId: client.id,
+      metadata: { clientType: client.type, linkedArchiveCount: archives.length },
+    });
   });
 
   revalidatePath("/dashboard/klien");
@@ -174,9 +199,45 @@ export async function updateClientAction(id: string, formData: FormData) {
   if (!data.name) throw new Error("Nama klien wajib diisi.");
   validateClientIdentity(data);
 
-  await prisma.client.update({
-    where: { id, officeId: session.user.officeId },
-    data,
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.client.findFirst({
+      where: { id, officeId: session.user.officeId },
+      select: {
+        id: true,
+        type: true,
+        name: true,
+        nik: true,
+        nomorKk: true,
+        npwp: true,
+        tempatLahir: true,
+        tanggalLahir: true,
+        gender: true,
+        pekerjaan: true,
+        statusKawin: true,
+        wargaNegara: true,
+        address: true,
+        phone: true,
+        email: true,
+        notes: true,
+      },
+    });
+    if (!existing) throw new Error("Klien tidak ditemukan.");
+    const changedFields = Object.keys(data)
+      .filter((field) => !persistedValuesEqual(existing[field as keyof typeof existing], data[field as keyof typeof data]))
+      .sort();
+    const client = await tx.client.update({
+      where: { id: existing.id },
+      data,
+      select: { id: true, type: true },
+    });
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "CLIENT_UPDATE",
+      targetType: "CLIENT",
+      targetId: client.id,
+      metadata: { clientType: client.type, changedFields },
+    });
   });
 
   revalidatePath("/dashboard/klien");
@@ -192,13 +253,21 @@ export async function deleteClientAction(id: string) {
     select: { id: true },
   });
   if (!existing) throw new Error("Klien tidak ditemukan.");
-  await prisma.$transaction([
-    prisma.documentArchive.updateMany({
+  await prisma.$transaction(async (tx) => {
+    const archives = await tx.documentArchive.updateMany({
       where: { clientId: id, officeId: session.user.officeId },
       data: { clientId: null, status: "PERLU_REVIEW" },
-    }),
-    prisma.client.delete({ where: { id } }),
-  ]);
+    });
+    await tx.client.delete({ where: { id } });
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "CLIENT_DELETE",
+      targetType: "CLIENT",
+      targetId: id,
+      metadata: { unlinkedArchiveCount: archives.count },
+    });
+  });
 
   revalidatePath("/dashboard/klien");
   redirect("/dashboard/klien");

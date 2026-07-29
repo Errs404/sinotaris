@@ -7,6 +7,7 @@ import { generateDocx, sanitizeFileName } from "@/lib/docx";
 import { formatIndonesianDateText, formatAktaDate, formatDisplayDate } from "@/lib/indoDate";
 import { collectDatePairs, type TemplateFieldsDef } from "@/lib/templateFields";
 import crypto from "crypto";
+import { createAuditLog } from "@/lib/audit";
 
 export async function POST(
   request: NextRequest,
@@ -83,18 +84,38 @@ export async function POST(
     );
 
     // Catat riwayat generate
-    await prisma.generatedDoc.create({
-      data: {
-        templateId: template.id,
-        pekerjaanId,
-        archiveId,
-        generatedById: session.user.id,
-        fileName,
-        dataJson: data,
-        templateChecksum,
-        archiveChecksum,
-        outputChecksum,
-      },
+    await prisma.$transaction(async (tx) => {
+      const generatedDoc = await tx.generatedDoc.create({
+        data: {
+          templateId: template.id,
+          pekerjaanId,
+          archiveId,
+          generatedById: session.user.id,
+          fileName,
+          dataJson: data,
+          templateChecksum,
+          archiveChecksum,
+          outputChecksum,
+        },
+        select: { id: true },
+      });
+      await createAuditLog(tx, {
+        officeId: session.user.officeId,
+        actorId: session.user.id,
+        action: "GENERATED_DOC_CREATE",
+        targetType: "GENERATED_DOC",
+        targetId: generatedDoc.id,
+        metadata: {
+          templateId: template.id,
+          ...(pekerjaanId ? { pekerjaanId } : {}),
+          ...(archiveId ? { archiveId } : {}),
+          templateChecksum,
+          ...(archiveChecksum ? { archiveChecksum } : {}),
+          outputChecksum,
+          byteCount: buffer.length,
+          mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        },
+      });
     });
 
     return new NextResponse(new Uint8Array(buffer), {

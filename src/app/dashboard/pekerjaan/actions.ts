@@ -5,10 +5,27 @@ import { redirect } from "next/navigation";
 import { requireSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
+import { createAuditLog } from "@/lib/audit";
 
 interface PartyInput {
   clientId: string;
   peran: string;
+}
+
+function persistedValuesEqual(previous: unknown, next: unknown): boolean {
+  if (previous == null || next == null) return previous == null && next == null;
+  if (previous instanceof Date || next instanceof Date) {
+    return previous instanceof Date && next instanceof Date && previous.getTime() === next.getTime();
+  }
+  if (typeof previous === "number" || typeof next === "number") return String(previous) === String(next);
+  return previous === next;
+}
+
+function sameParties(previous: PartyInput[], next: PartyInput[]): boolean {
+  const keys = (parties: PartyInput[]) => parties.map(({ clientId, peran }) => `${clientId}\u0000${peran}`).sort();
+  const previousKeys = keys(previous);
+  const nextKeys = keys(next);
+  return previousKeys.length === nextKeys.length && previousKeys.every((key, index) => key === nextKeys[index]);
 }
 
 function partiesFromForm(formData: FormData): PartyInput[] {
@@ -124,14 +141,25 @@ export async function createPekerjaanAction(formData: FormData) {
   // Staf tidak boleh mengisi honorarium
   if (session.user.role !== "NOTARIS") data.honorarium = null;
 
-  await prisma.pekerjaan.create({
-    data: {
-      ...data,
-      officeId: session.user.officeId,
-      clients: {
-        create: parties.map((party) => ({ clientId: party.clientId, peran: party.peran })),
+  await prisma.$transaction(async (tx) => {
+    const pekerjaan = await tx.pekerjaan.create({
+      data: {
+        ...data,
+        officeId: session.user.officeId,
+        clients: {
+          create: parties.map((party) => ({ clientId: party.clientId, peran: party.peran })),
+        },
       },
-    },
+      select: { id: true, kind: true, status: true },
+    });
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "PEKERJAAN_CREATE",
+      targetType: "PEKERJAAN",
+      targetId: pekerjaan.id,
+      metadata: { kind: pekerjaan.kind, status: pekerjaan.status, partyCount: parties.length },
+    });
   });
 
   revalidatePath("/dashboard/pekerjaan");
@@ -147,33 +175,67 @@ export async function updatePekerjaanAction(id: string, formData: FormData) {
   if (!data.jenis || !data.judul) throw new Error("Jenis dan judul pekerjaan wajib diisi.");
   await validateParties(session.user.officeId, parties);
 
-  // Staf tidak boleh mengubah honorarium — pertahankan nilai lama
-  if (session.user.role !== "NOTARIS") {
-    const existing = await prisma.pekerjaan.findFirst({
+  await prisma.$transaction(async (tx) => {
+    const existing = await tx.pekerjaan.findFirst({
       where: { id, officeId: session.user.officeId },
-      select: { honorarium: true },
+      select: {
+        id: true,
+        kind: true,
+        jenis: true,
+        judul: true,
+        nomorAkta: true,
+        tanggalAkta: true,
+        status: true,
+        keterangan: true,
+        bentukHukum: true,
+        pihakAlih: true,
+        pihakTerima: true,
+        luasTanah: true,
+        luasBangunan: true,
+        hargaTransaksi: true,
+        nop: true,
+        bphtb: true,
+        pphFinal: true,
+        honorarium: true,
+        clients: { select: { clientId: true, peran: true } },
+      },
     });
-    data.honorarium = existing?.honorarium ? Number(existing.honorarium) : null;
-  }
+    if (!existing) throw new Error("Pekerjaan tidak ditemukan.");
+    const updateData = session.user.role === "NOTARIS"
+      ? data
+      : Object.fromEntries(Object.entries(data).filter(([field]) => field !== "honorarium"));
+    const changedFields = Object.keys(updateData)
+      .filter((field) => !persistedValuesEqual(
+        existing[field as keyof typeof existing],
+        updateData[field as keyof typeof updateData],
+      ));
+    if (!sameParties(existing.clients, parties)) changedFields.push("clients");
 
-  const existingPekerjaan = await prisma.pekerjaan.findFirst({
-    where: { id, officeId: session.user.officeId },
-    select: { id: true },
-  });
-  if (!existingPekerjaan) throw new Error("Pekerjaan tidak ditemukan.");
-
-  await prisma.$transaction([
-    prisma.pekerjaanClient.deleteMany({ where: { pekerjaanId: id } }),
-    prisma.pekerjaan.update({
-      where: { id },
+    await tx.pekerjaanClient.deleteMany({ where: { pekerjaanId: id } });
+    const pekerjaan = await tx.pekerjaan.update({
+      where: { id: existing.id },
       data: {
-        ...data,
+        ...updateData,
         clients: {
           create: parties.map((party) => ({ clientId: party.clientId, peran: party.peran })),
         },
       },
-    }),
-  ]);
+      select: { id: true, kind: true, status: true },
+    });
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "PEKERJAAN_UPDATE",
+      targetType: "PEKERJAAN",
+      targetId: pekerjaan.id,
+      metadata: {
+        kind: pekerjaan.kind,
+        status: pekerjaan.status,
+        changedFields: changedFields.sort(),
+        partyCount: parties.length,
+      },
+    });
+  });
 
   revalidatePath("/dashboard/pekerjaan");
   redirect("/dashboard/pekerjaan");
@@ -189,17 +251,25 @@ export async function deletePekerjaanAction(id: string) {
   });
   if (!existing) throw new Error("Pekerjaan tidak ditemukan.");
 
-  await prisma.$transaction([
-    prisma.generatedDoc.updateMany({
+  await prisma.$transaction(async (tx) => {
+    const documents = await tx.generatedDoc.updateMany({
       where: { pekerjaanId: id },
       data: { pekerjaanId: null },
-    }),
-    prisma.invoice.updateMany({
+    });
+    const invoices = await tx.invoice.updateMany({
       where: { pekerjaanId: id, officeId: session.user.officeId },
       data: { pekerjaanId: null },
-    }),
-    prisma.pekerjaan.delete({ where: { id } }),
-  ]);
+    });
+    await tx.pekerjaan.delete({ where: { id } });
+    await createAuditLog(tx, {
+      officeId: session.user.officeId,
+      actorId: session.user.id,
+      action: "PEKERJAAN_DELETE",
+      targetType: "PEKERJAAN",
+      targetId: id,
+      metadata: { unlinkedGeneratedDocCount: documents.count, unlinkedInvoiceCount: invoices.count },
+    });
+  });
 
   revalidatePath("/dashboard/pekerjaan");
   redirect("/dashboard/pekerjaan");

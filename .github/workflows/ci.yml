@@ -63,6 +63,12 @@ jobs:
           NODE_ENV: test
         run: npm run test:integration
 
+      - name: Run OCR helper tests
+        run: npm run test:ocr-helpers
+
+      - name: Run live synthetic OCR tests
+        run: npm run test:ocr-live
+
       - name: Run archive parser tests
         run: npm run test:archive-parser
 

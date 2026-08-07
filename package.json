@@ -15,6 +15,7 @@
     "test:archive-parser": "tsx scripts/test-archive-parser.ts",
     "test:ocr-helpers": "tsx scripts/test-ocr-helpers.ts",
     "test:ocr-live": "tsx scripts/test-ocr-live.ts",
+    "test:pekerjaan-ui": "node --import tsx --test tests/pekerjaanUi.test.ts",
     "test:integration:guard": "node --import tsx --test --test-concurrency=1 tests/integration/databaseGuard.test.ts",
     "test:integration": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/audit.integration.test.ts tests/integration/tenant.integration.test.ts",
     "test:integration:audit": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/audit.integration.test.ts"

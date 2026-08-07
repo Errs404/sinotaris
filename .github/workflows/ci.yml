@@ -72,6 +72,9 @@ jobs:
       - name: Run archive parser tests
         run: npm run test:archive-parser
 
+      - name: Run pekerjaan UI helper tests
+        run: npm run test:pekerjaan-ui
+
       - name: Run lint checks
         run: npm run lint
 

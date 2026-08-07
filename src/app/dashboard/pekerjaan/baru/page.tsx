@@ -11,11 +11,18 @@ export default async function PekerjaanBaruPage({
 }) {
   const session = await auth();
   const { kind } = await searchParams;
-  const clients = await prisma.client.findMany({
-    where: { officeId: session!.user.officeId },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, nik: true },
-  });
+  const [clients, users] = await Promise.all([
+    prisma.client.findMany({
+      where: { officeId: session!.user.officeId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, nik: true },
+    }),
+    prisma.user.findMany({
+      where: { officeId: session!.user.officeId, isActive: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, role: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -33,6 +40,8 @@ export default async function PekerjaanBaruPage({
         isNotaris={session!.user.role === "NOTARIS"}
         submitLabel="Simpan Pekerjaan"
         clients={clients}
+        users={users}
+        currentActorId={session!.user.id}
       />
     </div>
   );

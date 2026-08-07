@@ -4,6 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { formatRupiah, monthNames } from "@/lib/indoDate";
 import { PekerjaanChart } from "./PekerjaanChart";
 import {
+  formatDateOnly,
+  indonesiaTodayDateOnly,
+  pekerjaanPriorityClass,
+  pekerjaanPriorityLabel,
+  pekerjaanStatusClass,
+  pekerjaanStatusLabel,
+} from "@/lib/pekerjaanUi";
+import {
   Users,
   Briefcase,
   FileText,
@@ -12,6 +20,10 @@ import {
   Plus,
   TrendingUp,
   Bell,
+  AlertTriangle,
+  CalendarClock,
+  Flag,
+  UserCheck,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -20,9 +32,14 @@ export default async function DashboardPage() {
   const isNotaris = session!.user.role === "NOTARIS";
 
   const now = new Date();
+  const today = indonesiaTodayDateOnly(now);
+  const tomorrow = new Date(today);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const activeStatuses = ["MASUK", "PROSES", "TANDA_TANGAN"] as const;
 
-  const [totalKlien, pekerjaanBerjalan, pekerjaanBulanIni, invoiceBelumLunas, pengingatAktif, honorBulanIni] =
+  const [totalKlien, pekerjaanBerjalan, pekerjaanBulanIni, invoiceBelumLunas, pengingatAktif, honorBulanIni,
+    overdueCount, dueTodayCount, highPriorityCount, myCount, actionNeeded] =
     await Promise.all([
       prisma.client.count({ where: { officeId } }),
       prisma.pekerjaan.count({
@@ -45,6 +62,23 @@ export default async function DashboardPage() {
             _sum: { honorarium: true },
           })
         : null,
+      prisma.pekerjaan.count({ where: { officeId, status: { in: [...activeStatuses] }, dueDate: { lt: today } } }),
+      prisma.pekerjaan.count({ where: { officeId, status: { in: [...activeStatuses] }, dueDate: { gte: today, lt: tomorrow } } }),
+      prisma.pekerjaan.count({ where: { officeId, status: { in: [...activeStatuses] }, priority: "TINGGI" } }),
+      prisma.pekerjaan.count({ where: { officeId, status: { in: [...activeStatuses] }, picId: session!.user.id } }),
+      prisma.pekerjaan.findMany({
+        where: {
+          officeId,
+          status: { in: [...activeStatuses] },
+          OR: [{ dueDate: { lt: tomorrow } }, { priority: "TINGGI" }],
+        },
+        orderBy: [{ dueDate: { sort: "asc", nulls: "last" } }, { priority: "desc" }, { updatedAt: "desc" }],
+        take: 12,
+        select: {
+          id: true, judul: true, status: true, priority: true, dueDate: true,
+          pic: { select: { name: true } },
+        },
+      }),
     ]);
 
   // Chart data — 6 bulan terakhir
@@ -70,6 +104,13 @@ export default async function DashboardPage() {
     { href: "/dashboard/klien/baru", label: "Tambah Klien", icon: UserPlus },
     { href: "/dashboard/pekerjaan/baru", label: "Tambah Pekerjaan", icon: Plus },
     { href: "/dashboard/dokumen", label: "Buat Dokumen", icon: FileText },
+  ];
+
+  const actionStats = [
+    { label: "Overdue", value: overdueCount, icon: AlertTriangle, color: "text-red-600 bg-red-100" },
+    { label: "Jatuh Tempo Hari Ini", value: dueTodayCount, icon: CalendarClock, color: "text-amber-600 bg-amber-100" },
+    { label: "Prioritas Tinggi", value: highPriorityCount, icon: Flag, color: "text-rose-600 bg-rose-100" },
+    { label: "Pekerjaan Saya", value: myCount, icon: UserCheck, color: "text-indigo-600 bg-indigo-100" },
   ];
 
   return (
@@ -124,6 +165,47 @@ export default async function DashboardPage() {
       )}
 
       <PekerjaanChart data={chartData} />
+
+      <section className="space-y-4" aria-labelledby="action-needed-title">
+        <div>
+          <h3 id="action-needed-title" className="font-semibold text-slate-800 dark:text-slate-100">Perlu Tindakan</h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Pekerjaan aktif yang terlambat, jatuh tempo hari ini, atau berprioritas tinggi.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {actionStats.map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-indigo-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{stat.label}</p>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${stat.color}`}><stat.icon className="h-4 w-4" /></div>
+              </div>
+              <p className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
+          {actionNeeded.length === 0 ? (
+            <p className="text-sm text-slate-500 dark:text-slate-400">Tidak ada pekerjaan yang perlu tindakan khusus.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+              {actionNeeded.map((item) => {
+                const overdue = Boolean(item.dueDate && item.dueDate < today);
+                return (
+                  <li key={item.id} className="py-3 first:pt-0 last:pb-0">
+                    <Link href={`/dashboard/pekerjaan/${item.id}`} className="block rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                      <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800 hover:text-indigo-700 dark:text-slate-100 dark:hover:text-indigo-300">{item.judul}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">PIC: {item.pic?.name ?? "Belum ditetapkan"}</p></div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-0 sm:justify-end">
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${pekerjaanStatusClass[item.status]}`}>{pekerjaanStatusLabel[item.status]}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${pekerjaanPriorityClass[item.priority]}`}>{pekerjaanPriorityLabel[item.priority]}</span>
+                        <span className={overdue ? "rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-300" : "text-xs text-slate-500 dark:text-slate-400"}>{overdue ? `Terlambat · ${formatDateOnly(item.dueDate)}` : `Jatuh tempo ${formatDateOnly(item.dueDate)}`}</span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </section>
 
       <div className="rounded-xl border border-indigo-100 bg-white p-5 shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
         <div className="mb-3 flex items-center gap-2">

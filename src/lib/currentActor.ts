@@ -14,3 +14,9 @@ export async function requireCurrentActor(userId: string, db: ActorDb = prisma):
   if (!actor) throw new Error("Akun tidak aktif atau sudah tidak tersedia. Silakan masuk kembali.");
   return actor;
 }
+
+export async function requireCurrentNotaris(userId: string, db: ActorDb = prisma): Promise<CurrentActor> {
+  const actor = await requireCurrentActor(userId, db);
+  if (actor.role !== "NOTARIS") throw new Error("Akses hanya untuk Notaris.");
+  return actor;
+}

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireNotaris } from "@/auth";
+import { requireSession } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
 import {
@@ -13,6 +13,12 @@ import {
 import type { ArchiveTypeValue } from "@/lib/archiveTypes";
 import { createArchiveFromFile } from "@/lib/archiveCreation";
 import { createAuditLog } from "@/lib/audit";
+import { requireCurrentNotaris } from "@/lib/currentActor";
+import {
+  assertArchiveChecklistMoveAllowed,
+  lockArchiveForChecklistMutation,
+  reconcileChecklistItemsAfterArchiveDelete,
+} from "@/lib/checklistService";
 
 const validTypes = new Set<ArchiveTypeValue>([
   "KTP",
@@ -45,30 +51,32 @@ async function validateRelations(officeId: string, clientId: string | null, peke
 }
 
 export async function uploadArchiveAction(formData: FormData) {
-  const session = await requireNotaris();
-  await assertWritable(session.user.officeId);
+  const session = await requireSession();
+  const actor = await requireCurrentNotaris(session.user.id);
+  await assertWritable(actor.officeId);
 
   const file = formData.get("file") as File | null;
   if (!(file instanceof File)) throw new Error("Pilih file yang akan dipindai.");
   const type = requestedType(formData);
   const clientId = nullable(formData.get("clientId"));
   const pekerjaanId = nullable(formData.get("pekerjaanId"));
-  await validateRelations(session.user.officeId, clientId, pekerjaanId);
+  await validateRelations(actor.officeId, clientId, pekerjaanId);
   const archive = await createArchiveFromFile({
-    officeId: session.user.officeId,
+    officeId: actor.officeId,
     file,
     type,
     clientId,
     pekerjaanId,
-    uploadedById: session.user.id,
+    uploadedById: actor.id,
   });
   revalidatePath("/dashboard/arsip");
   redirect(`/dashboard/arsip/${archive.id}`);
 }
 
 export async function updateArchiveReviewAction(id: string, formData: FormData) {
-  const session = await requireNotaris();
-  await assertWritable(session.user.officeId);
+  const session = await requireSession();
+  const actor = await requireCurrentNotaris(session.user.id);
+  await assertWritable(actor.officeId);
 
   const fieldsRaw = String(formData.get("fieldsJson") ?? "{}");
   let fields: Record<string, string>;
@@ -94,8 +102,10 @@ export async function updateArchiveReviewAction(id: string, formData: FormData) 
   }
 
   await prisma.$transaction(async (tx) => {
+    const current = await requireCurrentNotaris(session.user.id, tx);
+    if (current.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
     const archive = await tx.documentArchive.findFirst({
-      where: { id, officeId: session.user.officeId },
+      where: { id, officeId: current.officeId },
       select: { id: true, extractedJson: true },
     });
     if (!archive) throw new Error("Arsip tidak ditemukan.");
@@ -121,8 +131,8 @@ export async function updateArchiveReviewAction(id: string, formData: FormData) 
       select: { id: true, type: true, status: true },
     });
     await createAuditLog(tx, {
-      officeId: session.user.officeId,
-      actorId: session.user.id,
+      officeId: current.officeId,
+      actorId: current.id,
       action: "ARCHIVE_REVIEW",
       targetType: "DOCUMENT_ARCHIVE",
       targetId: updated.id,
@@ -139,8 +149,9 @@ function dateOrNull(value: string | undefined): Date | null {
 }
 
 export async function confirmArchiveAsClientAction(id: string, formData: FormData) {
-  const session = await requireNotaris();
-  await assertWritable(session.user.officeId);
+  const session = await requireSession();
+  const actor = await requireCurrentNotaris(session.user.id);
+  await assertWritable(actor.officeId);
   const fieldsRaw = String(formData.get("fieldsJson") ?? "{}");
   let fields: Record<string, string>;
   try {
@@ -161,17 +172,18 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
 
   const existingClientId = nullable(formData.get("existingClientId"));
   if (existingClientId) {
-    if (session.user.role !== "NOTARIS") throw new Error("Hanya Notaris yang dapat memperbarui klien lama dari hasil ekstraksi.");
     await prisma.$transaction(async (tx) => {
+      const current = await requireCurrentNotaris(session.user.id, tx);
+      if (current.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
       const archive = await tx.documentArchive.findFirst({
-        where: { id, officeId: session.user.officeId },
+        where: { id, officeId: current.officeId },
       });
       if (!archive) throw new Error("Arsip tidak ditemukan.");
       if (archive.status === "GAGAL" || archive.clientId !== null) {
         throw new Error("Arsip sudah berubah atau terhubung ke Klien lain.");
       }
       const existing = await tx.client.findFirst({
-        where: { id: existingClientId, officeId: session.user.officeId },
+        where: { id: existingClientId, officeId: current.officeId },
         select: {
           id: true,
           name: true,
@@ -218,7 +230,7 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
       const claimed = await tx.documentArchive.updateMany({
         where: {
           id: archive.id,
-          officeId: session.user.officeId,
+          officeId: current.officeId,
           updatedAt: archive.updatedAt,
           status: archive.status,
           clientId: null,
@@ -231,8 +243,8 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
       });
       if (claimed.count !== 1) throw new Error("Arsip baru saja diubah oleh proses lain. Silakan ulangi.");
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: current.officeId,
+        actorId: current.id,
         action: "CLIENT_UPDATE",
         targetType: "CLIENT",
         targetId: existing.id,
@@ -242,8 +254,8 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
         },
       });
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: current.officeId,
+        actorId: current.id,
         action: "ARCHIVE_CONFIRM",
         targetType: "DOCUMENT_ARCHIVE",
         targetId: archive.id,
@@ -252,8 +264,10 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
     });
   } else {
     await prisma.$transaction(async (tx) => {
+      const current = await requireCurrentNotaris(session.user.id, tx);
+      if (current.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
       const archive = await tx.documentArchive.findFirst({
-        where: { id, officeId: session.user.officeId },
+        where: { id, officeId: current.officeId },
       });
       if (!archive) throw new Error("Arsip tidak ditemukan.");
       if (archive.status === "GAGAL" || archive.clientId !== null) {
@@ -261,7 +275,7 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
       }
       const client = await tx.client.create({
         data: {
-          officeId: session.user.officeId,
+          officeId: current.officeId,
           type: "PERORANGAN",
           name: fields.name,
           nik: fields.nik || null,
@@ -279,7 +293,7 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
       const claimed = await tx.documentArchive.updateMany({
         where: {
           id: archive.id,
-          officeId: session.user.officeId,
+          officeId: current.officeId,
           updatedAt: archive.updatedAt,
           status: archive.status,
           clientId: null,
@@ -292,16 +306,16 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
       });
       if (claimed.count !== 1) throw new Error("Arsip baru saja diubah oleh proses lain. Silakan ulangi.");
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: current.officeId,
+        actorId: current.id,
         action: "CLIENT_CREATE",
         targetType: "CLIENT",
         targetId: client.id,
         metadata: { clientType: client.type, sourceArchiveId: archive.id },
       });
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: current.officeId,
+        actorId: current.id,
         action: "ARCHIVE_CONFIRM",
         targetType: "DOCUMENT_ARCHIVE",
         targetId: archive.id,
@@ -314,17 +328,18 @@ export async function confirmArchiveAsClientAction(id: string, formData: FormDat
 }
 
 export async function linkArchiveAction(id: string, formData: FormData) {
-  const session = await requireNotaris();
-  await assertWritable(session.user.officeId);
+  const session = await requireSession();
+  const actor = await requireCurrentNotaris(session.user.id);
+  await assertWritable(actor.officeId);
   const clientId = nullable(formData.get("clientId"));
   const pekerjaanId = nullable(formData.get("pekerjaanId"));
-  await validateRelations(session.user.officeId, clientId, pekerjaanId);
+  await validateRelations(actor.officeId, clientId, pekerjaanId);
   await prisma.$transaction(async (tx) => {
-    const archive = await tx.documentArchive.findFirst({
-      where: { id, officeId: session.user.officeId },
-      select: { id: true, clientId: true, pekerjaanId: true, updatedAt: true },
-    });
+    const current = await requireCurrentNotaris(session.user.id, tx);
+    if (current.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
+    const archive = await lockArchiveForChecklistMutation(tx, current.officeId, id);
     if (!archive) throw new Error("Arsip tidak ditemukan.");
+    await assertArchiveChecklistMoveAllowed(tx, current.officeId, archive, pekerjaanId);
     const changedFields = [
       ...(archive.clientId !== clientId ? ["clientId"] : []),
       ...(archive.pekerjaanId !== pekerjaanId ? ["pekerjaanId"] : []),
@@ -333,7 +348,7 @@ export async function linkArchiveAction(id: string, formData: FormData) {
     const updated = await tx.documentArchive.updateMany({
       where: {
         id,
-        officeId: session.user.officeId,
+        officeId: current.officeId,
         clientId: archive.clientId,
         pekerjaanId: archive.pekerjaanId,
         updatedAt: archive.updatedAt,
@@ -342,8 +357,8 @@ export async function linkArchiveAction(id: string, formData: FormData) {
     });
     if (updated.count !== 1) throw new Error("Relasi arsip baru saja diubah oleh proses lain. Silakan ulangi.");
     await createAuditLog(tx, {
-      officeId: session.user.officeId,
-      actorId: session.user.id,
+      officeId: current.officeId,
+      actorId: current.id,
       action: "ARCHIVE_RELATION_UPDATE",
       targetType: "DOCUMENT_ARCHIVE",
       targetId: id,
@@ -360,31 +375,57 @@ export async function linkArchiveAction(id: string, formData: FormData) {
 }
 
 export async function deleteArchiveAction(id: string) {
-  const session = await requireNotaris();
-  await assertWritable(session.user.officeId);
-  const archive = await prisma.documentArchive.findFirst({
-    where: { id, officeId: session.user.officeId },
-    select: { id: true, storageKey: true },
-  });
-  if (!archive) throw new Error("Arsip tidak ditemukan.");
-  const quarantined = quarantineArchiveFile(session.user.officeId, archive.storageKey);
+  const session = await requireSession();
+  const actor = await requireCurrentNotaris(session.user.id);
+  await assertWritable(actor.officeId);
+  let quarantined: ReturnType<typeof quarantineArchiveFile> | null = null;
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.documentArchive.delete({ where: { id: archive.id } });
+      const current = await requireCurrentNotaris(session.user.id, tx);
+      if (current.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
+      const archive = await lockArchiveForChecklistMutation(tx, current.officeId, id);
+      if (!archive) throw new Error("Arsip tidak ditemukan.");
+      const affectedItems = await tx.pekerjaanChecklistAttachment.findMany({
+        where: { archiveId: archive.id, officeId: current.officeId },
+        select: { itemId: true },
+      });
+      const affectedChecklistItemIds = [...new Set(affectedItems.map((item) => item.itemId))];
+      quarantined = quarantineArchiveFile(current.officeId, archive.storageKey);
+      const deleted = await tx.documentArchive.deleteMany({
+        where: { id: archive.id, officeId: current.officeId },
+      });
+      if (deleted.count !== 1) {
+        throw new Error("Arsip sudah diubah oleh pengguna lain. Muat ulang halaman lalu coba lagi.");
+      }
+      await reconcileChecklistItemsAfterArchiveDelete(
+        tx,
+        current.officeId,
+        affectedChecklistItemIds,
+      );
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: current.officeId,
+        actorId: current.id,
         action: "ARCHIVE_DELETE",
         targetType: "DOCUMENT_ARCHIVE",
         targetId: archive.id,
-        metadata: { databaseDeleted: true, fileDeletePending: true },
+        metadata: {
+          databaseDeleted: true,
+          fileDeletePending: true,
+          affectedChecklistItemCount: affectedChecklistItemIds.length,
+        },
       });
     });
   } catch (error) {
-    restoreQuarantinedArchive(quarantined);
+    if (quarantined) restoreQuarantinedArchive(quarantined);
     throw error;
   }
-  finalizeQuarantinedArchive(quarantined);
+  if (quarantined) {
+    try {
+      finalizeQuarantinedArchive(quarantined);
+    } catch {
+      // Database deletion already committed; stale quarantine cleanup is best-effort.
+    }
+  }
   revalidatePath("/dashboard/arsip");
   redirect("/dashboard/arsip");
 }

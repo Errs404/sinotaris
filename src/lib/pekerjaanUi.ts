@@ -4,7 +4,10 @@ export type PekerjaanTimelineAction =
   | "PEKERJAAN_CREATE"
   | "PEKERJAAN_UPDATE"
   | "PEKERJAAN_WORKFLOW_UPDATE"
-  | "PEKERJAAN_STATUS_CHANGE";
+  | "PEKERJAAN_STATUS_CHANGE"
+  | "CHECKLIST_APPLY"
+  | "CHECKLIST_ATTACHMENT_UPDATE"
+  | "CHECKLIST_STATUS_CHANGE";
 
 const TIMELINE_FIELD_LABELS: Record<string, string> = {
   kind: "jabatan",
@@ -42,6 +45,24 @@ export function safePekerjaanTimelineDescription(
   viewerRole: UserRole | string,
 ): string {
   const metadata = timelineMetadata(rawMetadata);
+  if (action === "CHECKLIST_APPLY") {
+    const count = typeof metadata.addedCount === "number" && Number.isSafeInteger(metadata.addedCount) ? metadata.addedCount : null;
+    return count === null ? "Checklist pekerjaan diterapkan." : `${count} item checklist ditambahkan.`;
+  }
+  if (action === "CHECKLIST_ATTACHMENT_UPDATE") {
+    const operation = typeof metadata.operation === "string" ? metadata.operation : "";
+    const count = typeof metadata.attachmentCount === "number" && Number.isSafeInteger(metadata.attachmentCount) ? metadata.attachmentCount : null;
+    const prefix = operation.startsWith("DETACH") ? "Lampiran checklist dilepas" : operation.startsWith("ATTACH") ? "Lampiran checklist ditambahkan" : "Lampiran checklist diperbarui";
+    return count === null ? `${prefix}.` : `${prefix}; kini ada ${count} lampiran pada item.`;
+  }
+  if (action === "CHECKLIST_STATUS_CHANGE") {
+    const previous = typeof metadata.previousStatus === "string" ? metadata.previousStatus : null;
+    const next = typeof metadata.newStatus === "string" ? metadata.newStatus : null;
+    const labels: Record<string, string> = { KOSONG: "Kosong", TERLAMPIR: "Terlampir", TERVERIFIKASI: "Terverifikasi", DITOLAK: "Ditolak", DILEWATI: "Dilewati" };
+    return previous && next && labels[previous] && labels[next]
+      ? `Status item checklist diubah dari ${labels[previous]} menjadi ${labels[next]}.`
+      : "Status item checklist diperbarui.";
+  }
   if (action === "PEKERJAAN_CREATE") return "Pekerjaan dibuat dan alur kerja awal ditetapkan.";
   if (action === "PEKERJAAN_STATUS_CHANGE") {
     const previous = typeof metadata.previousStatus === "string" ? metadata.previousStatus : null;

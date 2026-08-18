@@ -26,15 +26,18 @@ model Office {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  users         User[]
-  subscriptions Subscription[]
-  clients       Client[]
-  pekerjaan     Pekerjaan[]
-  invoices      Invoice[]
-  reminders     Reminder[]
-  templates     DocTemplate[]
-  archives      DocumentArchive[]
-  auditLogs     AuditLog[]
+  users                User[]
+  subscriptions        Subscription[]
+  clients              Client[]
+  pekerjaan            Pekerjaan[]
+  invoices             Invoice[]
+  reminders            Reminder[]
+  templates            DocTemplate[]
+  archives             DocumentArchive[]
+  auditLogs            AuditLog[]
+  checklistTemplates   ChecklistTemplate[]
+  checklistItems       PekerjaanChecklistItem[]
+  checklistAttachments PekerjaanChecklistAttachment[]
 }
 
 enum UserRole {
@@ -43,19 +46,21 @@ enum UserRole {
 }
 
 model User {
-  id                String            @id @default(cuid())
-  officeId          String
-  office            Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  name              String
-  email             String            @unique
-  passwordHash      String
-  role              UserRole          @default(STAF)
-  isActive          Boolean           @default(true)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  generatedDocs     GeneratedDoc[]
-  uploadedArchives  DocumentArchive[] @relation("ArchiveUploadedBy")
-  assignedPekerjaan Pekerjaan[]       @relation("PekerjaanPic")
+  id                     String                         @id @default(cuid())
+  officeId               String
+  office                 Office                         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  name                   String
+  email                  String                         @unique
+  passwordHash           String
+  role                   UserRole                       @default(STAF)
+  isActive               Boolean                        @default(true)
+  createdAt              DateTime                       @default(now())
+  updatedAt              DateTime                       @updatedAt
+  generatedDocs          GeneratedDoc[]
+  uploadedArchives       DocumentArchive[]              @relation("ArchiveUploadedBy")
+  assignedPekerjaan      Pekerjaan[]                    @relation("PekerjaanPic")
+  verifiedChecklistItems PekerjaanChecklistItem[]       @relation("ChecklistVerifiedBy")
+  checklistAttachments   PekerjaanChecklistAttachment[] @relation("ChecklistAttachmentCreatedBy")
 }
 
 enum AuditAction {
@@ -76,6 +81,12 @@ enum AuditAction {
   ARCHIVE_PREVIEW
   ARCHIVE_DOWNLOAD
   GENERATED_DOC_CREATE
+  CHECKLIST_TEMPLATE_CREATE
+  CHECKLIST_TEMPLATE_UPDATE
+  CHECKLIST_TEMPLATE_DELETE
+  CHECKLIST_APPLY
+  CHECKLIST_ATTACHMENT_UPDATE
+  CHECKLIST_STATUS_CHANGE
 }
 
 enum AuditTargetType {
@@ -83,6 +94,7 @@ enum AuditTargetType {
   PEKERJAAN
   DOCUMENT_ARCHIVE
   GENERATED_DOC
+  CHECKLIST_TEMPLATE
 }
 
 model AuditLog {
@@ -189,6 +201,14 @@ enum PekerjaanPriority {
   TINGGI
 }
 
+enum ChecklistItemStatus {
+  KOSONG
+  TERLAMPIR
+  TERVERIFIKASI
+  DITOLAK
+  DILEWATI
+}
+
 model Pekerjaan {
   id            String            @id @default(cuid())
   officeId      String
@@ -225,10 +245,11 @@ model Pekerjaan {
   // Biaya kantor (hanya terlihat role NOTARIS)
   honorarium Decimal? @db.Decimal(18, 2)
 
-  clients   PekerjaanClient[]
-  invoices  Invoice[]
-  documents GeneratedDoc[]
-  archives  DocumentArchive[]
+  clients        PekerjaanClient[]
+  invoices       Invoice[]
+  documents      GeneratedDoc[]
+  archives       DocumentArchive[]
+  checklistItems PekerjaanChecklistItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -238,6 +259,84 @@ model Pekerjaan {
   @@index([officeId, status, dueDate])
   @@index([officeId, picId, status])
   @@index([officeId, priority, status])
+}
+
+model ChecklistTemplate {
+  id        String                  @id @default(cuid())
+  officeId  String
+  office    Office                  @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  kind      PekerjaanKind
+  jenis     String
+  jenisKey  String
+  name      String
+  isActive  Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
+  items     ChecklistTemplateItem[]
+
+  @@unique([officeId, kind, jenisKey])
+  @@index([officeId, isActive, kind])
+}
+
+model ChecklistTemplateItem {
+  id           String                   @id @default(cuid())
+  templateId   String
+  template     ChecklistTemplate        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key          String
+  label        String
+  description  String?                  @db.Text
+  required     Boolean                  @default(true)
+  expectedType ArchiveDocumentType?
+  sortOrder    Int                      @default(0)
+  snapshots    PekerjaanChecklistItem[]
+
+  @@unique([templateId, key])
+  @@index([templateId, sortOrder])
+}
+
+model PekerjaanChecklistItem {
+  id              String                         @id @default(cuid())
+  officeId        String
+  office          Office                         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  pekerjaanId     String
+  pekerjaan       Pekerjaan                      @relation(fields: [pekerjaanId], references: [id], onDelete: Cascade)
+  templateItemId  String?
+  templateItem    ChecklistTemplateItem?         @relation(fields: [templateItemId], references: [id], onDelete: SetNull)
+  key             String
+  label           String
+  description     String?                        @db.Text
+  required        Boolean                        @default(true)
+  expectedType    ArchiveDocumentType?
+  sortOrder       Int                            @default(0)
+  status          ChecklistItemStatus            @default(KOSONG)
+  rejectionReason String?                        @db.Text
+  verifiedById    String?
+  verifiedBy      User?                          @relation("ChecklistVerifiedBy", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt      DateTime?
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+  attachments     PekerjaanChecklistAttachment[]
+
+  @@unique([pekerjaanId, key])
+  @@index([officeId, pekerjaanId, status])
+  @@index([officeId, required, status])
+}
+
+model PekerjaanChecklistAttachment {
+  id          String                 @id @default(cuid())
+  officeId    String
+  office      Office                 @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  itemId      String
+  item        PekerjaanChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  archiveId   String
+  archive     DocumentArchive        @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?                  @relation("ChecklistAttachmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime               @default(now())
+
+  @@unique([itemId, archiveId])
+  @@index([officeId, archiveId])
+  @@index([itemId, createdAt])
 }
 
 // Relasi many-to-many klien <-> pekerjaan dengan peran
@@ -364,28 +463,29 @@ enum ArchiveStatus {
 }
 
 model DocumentArchive {
-  id            String              @id @default(cuid())
-  officeId      String
-  office        Office              @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  clientId      String?
-  client        Client?             @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  pekerjaanId   String?
-  pekerjaan     Pekerjaan?          @relation(fields: [pekerjaanId], references: [id], onDelete: SetNull)
-  uploadedById  String?
-  uploadedBy    User?               @relation("ArchiveUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
-  type          ArchiveDocumentType @default(UMUM)
-  status        ArchiveStatus       @default(PERLU_REVIEW)
-  originalName  String
-  storageKey    String              @unique
-  mimeType      String
-  sizeBytes     Int
-  checksum      String
-  rawText       String              @default("")
-  extractedJson Json
-  errorMessage  String?
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-  generatedDocs GeneratedDoc[]
+  id                   String                         @id @default(cuid())
+  officeId             String
+  office               Office                         @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  clientId             String?
+  client               Client?                        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  pekerjaanId          String?
+  pekerjaan            Pekerjaan?                     @relation(fields: [pekerjaanId], references: [id], onDelete: SetNull)
+  uploadedById         String?
+  uploadedBy           User?                          @relation("ArchiveUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  type                 ArchiveDocumentType            @default(UMUM)
+  status               ArchiveStatus                  @default(PERLU_REVIEW)
+  originalName         String
+  storageKey           String                         @unique
+  mimeType             String
+  sizeBytes            Int
+  checksum             String
+  rawText              String                         @default("")
+  extractedJson        Json
+  errorMessage         String?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  generatedDocs        GeneratedDoc[]
+  checklistAttachments PekerjaanChecklistAttachment[]
 
   @@index([officeId, status, createdAt])
   @@index([officeId, clientId])

@@ -70,6 +70,7 @@ export default async function PekerjaanPage({ searchParams }: { searchParams: Pr
     select: {
       id: true, nomorAkta: true, tanggalAkta: true, jenis: true, judul: true, status: true,
       priority: true, dueDate: true, pic: { select: { id: true, name: true } },
+      checklistItems: { select: { required: true, status: true } },
     },
   });
   const today = indonesiaTodayDateOnly();
@@ -118,19 +119,22 @@ export default async function PekerjaanPage({ searchParams }: { searchParams: Pr
       </form>
 
       <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-lg shadow-indigo-100/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
-        <table className="min-w-[980px] w-full text-sm">
-          <thead><tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:bg-slate-700 dark:text-indigo-300"><th className="px-4 py-3">No. Akta / Tanggal</th><th className="px-4 py-3">Pekerjaan</th><th className="px-4 py-3">PIC</th><th className="px-4 py-3">Prioritas</th><th className="px-4 py-3">Jatuh Tempo</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"><span className="sr-only">Aksi</span></th></tr></thead>
+        <table className="min-w-[1060px] w-full text-sm">
+          <thead><tr className="bg-indigo-50 text-left text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:bg-slate-700 dark:text-indigo-300"><th className="px-4 py-3">No. Akta / Tanggal</th><th className="px-4 py-3">Pekerjaan</th><th className="px-4 py-3">PIC</th><th className="px-4 py-3">Prioritas</th><th className="px-4 py-3">Jatuh Tempo</th><th className="px-4 py-3">Checklist</th><th className="px-4 py-3">Status</th><th className="px-4 py-3"><span className="sr-only">Aksi</span></th></tr></thead>
           <tbody>
-            {items.length === 0 && <tr><td colSpan={7} className="px-4 py-12 text-center"><Briefcase className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-2 font-medium text-slate-500">Tidak ada pekerjaan yang sesuai dengan filter.</p></td></tr>}
+            {items.length === 0 && <tr><td colSpan={8} className="px-4 py-12 text-center"><Briefcase className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-2 font-medium text-slate-500">Tidak ada pekerjaan yang sesuai dengan filter.</p></td></tr>}
             {items.map((item) => {
               const overdue = isPekerjaanOverdue(item.dueDate, item.status, today);
-              return (
+               const required = item.checklistItems.filter((checklistItem) => checklistItem.required);
+               const verified = required.filter((checklistItem) => checklistItem.status === "TERVERIFIKASI").length;
+               return (
                 <tr key={item.id} className="border-b border-indigo-50 transition-colors hover:bg-indigo-50/60 dark:border-slate-700 dark:hover:bg-slate-700/50">
                   <td className="px-4 py-3"><p className="font-mono text-xs text-slate-700 dark:text-slate-200">{item.nomorAkta ?? "-"}</p><p className="mt-1 text-xs text-slate-500">{formatDateOnly(item.tanggalAkta)}</p></td>
                   <td className="px-4 py-3"><p className="font-medium text-slate-800 dark:text-slate-100">{item.judul}</p><p className="mt-1 text-xs text-slate-500">{item.jenis}</p></td>
                   <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{item.pic?.name ?? "Belum ditetapkan"}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pekerjaanPriorityClass[item.priority]}`}>{pekerjaanPriorityLabel[item.priority]}</span></td>
-                  <td className="px-4 py-3"><p className="text-slate-600 dark:text-slate-300">{formatDateOnly(item.dueDate)}</p>{overdue && <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-300">Terlambat</span>}</td>
+                   <td className="px-4 py-3"><p className="text-slate-600 dark:text-slate-300">{formatDateOnly(item.dueDate)}</p>{overdue && <span className="mt-1 inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700 dark:bg-red-900/40 dark:text-red-300">Terlambat</span>}</td>
+                   <td className="px-4 py-3">{required.length === 0 ? <span className="text-xs font-medium text-slate-400">Belum ada wajib</span> : <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${verified === required.length ? "bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300" : "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200"}`}>{verified}/{required.length} wajib</span>}</td>
                   <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${pekerjaanStatusClass[item.status]}`}>{pekerjaanStatusLabel[item.status]}</span></td>
                   <td className="px-4 py-3 text-right"><Link href={`/dashboard/pekerjaan/${item.id}`} className="font-medium text-indigo-700 hover:underline focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:text-indigo-400">Detail</Link></td>
                 </tr>

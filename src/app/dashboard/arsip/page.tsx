@@ -14,11 +14,14 @@ const statusStyle = {
   GAGAL: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300",
 };
 
-export default async function ArsipPage() {
+type SearchParams = { pekerjaanId?: string; type?: string };
+
+export default async function ArsipPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const session = await auth();
   if (!session?.user || session.user.role !== "NOTARIS") redirect("/dashboard");
   const officeId = session!.user.officeId;
-  const [archives, clients, jobs] = await Promise.all([
+  const params = await searchParams;
+  const [archives, clients, recentJobs, requestedJob] = await Promise.all([
     prisma.documentArchive.findMany({
       where: { officeId },
       orderBy: { createdAt: "desc" },
@@ -27,7 +30,16 @@ export default async function ArsipPage() {
     }),
     prisma.client.findMany({ where: { officeId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     prisma.pekerjaan.findMany({ where: { officeId }, orderBy: { updatedAt: "desc" }, select: { id: true, judul: true }, take: 100 }),
+    params.pekerjaanId
+      ? prisma.pekerjaan.findFirst({ where: { id: params.pekerjaanId, officeId }, select: { id: true, judul: true } })
+      : null,
   ]);
+  const jobs = requestedJob && !recentJobs.some((job) => job.id === requestedJob.id)
+    ? [requestedJob, ...recentJobs]
+    : recentJobs;
+  const validTypes = new Set<ArchiveTypeValue>(Object.keys(archiveTypeLabels) as ArchiveTypeValue[]);
+  const initialJobId = requestedJob?.id;
+  const initialType = validTypes.has(params.type as ArchiveTypeValue) ? params.type as ArchiveTypeValue : undefined;
 
   return (
     <div className="space-y-6">
@@ -44,7 +56,7 @@ export default async function ArsipPage() {
         </div>
       </div>
 
-      <UploadArchiveForm action={uploadArchiveAction} clients={clients} jobs={jobs} />
+      <UploadArchiveForm action={uploadArchiveAction} clients={clients} jobs={jobs} initialJobId={initialJobId} initialType={initialType} />
 
       <div className="overflow-x-auto rounded-xl border border-indigo-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
         <table className="w-full text-sm">

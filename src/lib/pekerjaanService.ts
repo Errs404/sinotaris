@@ -1,6 +1,7 @@
 import type { Prisma } from "@/generated/prisma/client";
 import type { PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { createAuditLog } from "@/lib/audit";
+import { instantiateChecklistFromMatchingTemplate } from "@/lib/checklistService";
 
 type DbClient = Prisma.TransactionClient;
 
@@ -12,7 +13,7 @@ export interface PekerjaanPartyInput {
 export interface PekerjaanActor {
   id: string;
   officeId: string;
-  role: UserRole | string;
+  role: UserRole;
 }
 
 export interface PekerjaanWorkflowInput {
@@ -145,13 +146,14 @@ export async function createPekerjaanForActor(
       completedAt: null,
       picId,
     },
-    select: { id: true, kind: true, status: true, priority: true, picId: true, dueDate: true },
+    select: { id: true, kind: true, jenis: true, status: true, priority: true, picId: true, dueDate: true },
   });
   if (parties.length) {
     await db.pekerjaanClient.createMany({
       data: parties.map((party) => ({ pekerjaanId: pekerjaan.id, clientId: party.clientId, peran: party.peran })),
     });
   }
+  await instantiateChecklistFromMatchingTemplate(db, actor, pekerjaan);
   await createAuditLog(db, {
     officeId: actor.officeId,
     actorId: actor.id,
@@ -305,6 +307,16 @@ export async function transitionPekerjaanForActor(
   }
 
   const completedAt = nextStatus === "SELESAI" ? new Date() : null;
+  const missingRequiredAtTransition = nextStatus === "TANDA_TANGAN" || nextStatus === "SELESAI"
+    ? await db.pekerjaanChecklistItem.count({
+      where: {
+        pekerjaanId: existing.id,
+        officeId: actor.officeId,
+        required: true,
+        status: { not: "TERVERIFIKASI" },
+      },
+    })
+    : null;
   const result = await db.pekerjaan.updateMany({
     where: { id: existing.id, officeId: actor.officeId, updatedAt: expectedUpdatedAt },
     data: { status: nextStatus, completedAt },
@@ -322,6 +334,7 @@ export async function transitionPekerjaanForActor(
       previousStatus: existing.status,
       newStatus: nextStatus,
       completedAtSet: completedAt !== null,
+      ...(missingRequiredAtTransition === null ? {} : { missingRequiredAtTransition }),
     },
   });
   return db.pekerjaan.findUniqueOrThrow({
@@ -339,11 +352,14 @@ export async function deletePekerjaanForActor(
   if (actor.role !== "NOTARIS") throw new Error("Hanya Notaris yang dapat menghapus pekerjaan.");
   const existing = await db.pekerjaan.findFirst({
     where: { id, officeId: actor.officeId },
-    select: { id: true, updatedAt: true },
+    select: { id: true, updatedAt: true, _count: { select: { checklistItems: true } } },
   });
   if (!existing) throw new Error("Pekerjaan tidak ditemukan.");
   if (existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
     throw new Error("Pekerjaan sudah diubah oleh pengguna lain. Muat ulang halaman lalu coba lagi.");
+  }
+  if (existing._count.checklistItems > 0) {
+    throw new Error("Pekerjaan yang memiliki checklist tidak dapat dihapus permanen. Batalkan pekerjaan agar riwayat checklist tetap tersimpan.");
   }
   const documents = await db.generatedDoc.updateMany({
     where: { pekerjaanId: existing.id },

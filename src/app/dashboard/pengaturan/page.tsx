@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSubscriptionState } from "@/lib/subscription";
 import { Field, TextArea, SubmitButton } from "@/components/form";
 import { updateOfficeAction } from "./actions";
+import Link from "next/link";
+import { ClipboardCheck, ChevronRight } from "lucide-react";
 
 export default async function PengaturanPage() {
   const session = await auth();
@@ -39,6 +41,10 @@ export default async function PengaturanPage() {
       </div>
 
       {isNotaris ? (
+        <>
+        <Link href="/dashboard/pengaturan/checklist" className="group flex items-center justify-between gap-4 rounded-xl border border-indigo-100 bg-white p-5 shadow-sm transition-colors hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
+          <span className="flex items-center gap-3"><span className="rounded-lg bg-indigo-100 p-2 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"><ClipboardCheck className="h-5 w-5" /></span><span><strong className="block text-slate-800 dark:text-slate-100">Template Checklist Dokumen</strong><span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Atur daftar dokumen berdasarkan kelompok dan jenis pekerjaan.</span></span></span><ChevronRight className="h-5 w-5 text-slate-400 transition-transform group-hover:translate-x-0.5" />
+        </Link>
         <form action={updateOfficeAction} className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
           <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Kantor</h3>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -58,7 +64,7 @@ export default async function PengaturanPage() {
           <div className="mt-6">
             <SubmitButton>Simpan Pengaturan</SubmitButton>
           </div>
-        </form>
+        </form></>
       ) : (
         <div className="rounded-xl bg-white p-6 text-sm text-slate-500 shadow-sm dark:bg-slate-800 dark:text-slate-400">
           Pengaturan kantor hanya bisa diubah oleh Notaris (Admin).

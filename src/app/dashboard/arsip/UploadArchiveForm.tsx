@@ -21,10 +21,14 @@ export function UploadArchiveForm({
   action,
   clients,
   jobs,
+  initialJobId,
+  initialType,
 }: {
   action: (formData: FormData) => Promise<void>;
   clients: Array<{ id: string; name: string }>;
   jobs: Array<{ id: string; judul: string }>;
+  initialJobId?: string;
+  initialType?: keyof typeof archiveTypeLabels;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
@@ -55,7 +59,7 @@ export function UploadArchiveForm({
         </div>
         <div>
           <label htmlFor="archive-type" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Jenis dokumen *</label>
-          <select id="archive-type" name="type" className={inputClass} defaultValue="" required>
+          <select id="archive-type" name="type" className={inputClass} defaultValue={initialType ?? ""} required>
             <option value="" disabled>— Pilih jenis dokumen —</option>
             {Object.entries(archiveTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
@@ -69,7 +73,7 @@ export function UploadArchiveForm({
         </div>
         <div>
           <label htmlFor="archive-job" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Hubungkan ke Pekerjaan (opsional)</label>
-          <select id="archive-job" name="pekerjaanId" className={inputClass} defaultValue="">
+          <select id="archive-job" name="pekerjaanId" className={inputClass} defaultValue={initialJobId ?? ""}>
             <option value="">— Belum dihubungkan —</option>
             {jobs.map((job) => <option key={job.id} value={job.id}>{job.judul}</option>)}
           </select>

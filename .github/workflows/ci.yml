@@ -75,6 +75,9 @@ jobs:
       - name: Run pekerjaan UI helper tests
         run: npm run test:pekerjaan-ui
 
+      - name: Run checklist UI helper tests
+        run: npm run test:checklist-ui
+
       - name: Run lint checks
         run: npm run lint
 

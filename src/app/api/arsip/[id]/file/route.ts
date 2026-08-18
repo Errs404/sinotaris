@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { requireCurrentNotaris } from "@/lib/currentActor";
 import { prisma } from "@/lib/prisma";
 import { readArchiveFile } from "@/lib/archiveStorage";
 import { createAuditLog } from "@/lib/audit";
@@ -8,13 +9,18 @@ import { findOwnedArchive } from "@/lib/archiveAccess";
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return new NextResponse("Belum login.", { status: 401 });
-  if (session.user.role !== "NOTARIS") return new NextResponse("Akses ditolak.", { status: 403 });
+  let actor: Awaited<ReturnType<typeof requireCurrentNotaris>>;
+  try {
+    actor = await requireCurrentNotaris(session.user.id);
+  } catch {
+    return new NextResponse("Akses ditolak.", { status: 403 });
+  }
   const { id } = await params;
-  const archive = await findOwnedArchive(prisma, session.user.officeId, id);
+  const archive = await findOwnedArchive(prisma, actor.officeId, id);
   if (!archive) return new NextResponse("Arsip tidak ditemukan.", { status: 404 });
   let buffer: Buffer;
   try {
-    buffer = readArchiveFile(session.user.officeId, archive.storageKey, archive.checksum);
+    buffer = readArchiveFile(actor.officeId, archive.storageKey, archive.checksum);
   } catch {
     return new NextResponse("File arsip tidak ditemukan.", { status: 404 });
   }
@@ -23,8 +29,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const disposition = wantsPreview && canPreview ? "inline" : "attachment";
   try {
     await createAuditLog(prisma, {
-      officeId: session.user.officeId,
-      actorId: session.user.id,
+      officeId: actor.officeId,
+      actorId: actor.id,
       action: disposition === "inline" ? "ARCHIVE_PREVIEW" : "ARCHIVE_DOWNLOAD",
       targetType: "DOCUMENT_ARCHIVE",
       targetId: archive.id,

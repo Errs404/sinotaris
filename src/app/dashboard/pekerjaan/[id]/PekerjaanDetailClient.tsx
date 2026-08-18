@@ -7,9 +7,11 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { pekerjaanStatusClass, pekerjaanStatusLabel } from "@/lib/pekerjaanUi";
+import type { ChecklistProgress } from "@/lib/checklistUi";
 import { PekerjaanForm, type PekerjaanUserOption } from "../PekerjaanForm";
 import type { ClientOption } from "../PihakEditor";
 import { PekerjaanTransitionControls } from "./PekerjaanTransitionControls";
+import { PekerjaanChecklistPanel, type ChecklistArchiveDto, type PekerjaanChecklistItemDto } from "./PekerjaanChecklistPanel";
 
 export type PekerjaanDetailDto = {
   id: string;
@@ -41,7 +43,7 @@ export type PekerjaanDetailDto = {
 
 export type PekerjaanTimelineItem = {
   id: string;
-  category: "create" | "general" | "workflow" | "status";
+  category: "create" | "general" | "workflow" | "status" | "checklist";
   actorName: string;
   actorRole: string;
   description: string;
@@ -53,6 +55,7 @@ const timelineLabel = {
   general: "Data umum diperbarui",
   workflow: "Alur kerja diperbarui",
   status: "Status diperbarui",
+  checklist: "Checklist diperbarui",
 };
 
 export function PekerjaanDetailClient({
@@ -65,6 +68,7 @@ export function PekerjaanDetailClient({
   clients,
   users,
   timeline,
+  checklist,
 }: {
   pekerjaan: PekerjaanDetailDto;
   role: UserRole;
@@ -75,6 +79,7 @@ export function PekerjaanDetailClient({
   clients: ClientOption[];
   users: PekerjaanUserOption[];
   timeline: PekerjaanTimelineItem[];
+  checklist: { items: PekerjaanChecklistItemDto[]; candidates: ChecklistArchiveDto[]; progress: ChecklistProgress; canApplyTemplate: boolean };
 }) {
   const router = useRouter();
   const { toast } = useToast();
@@ -112,8 +117,10 @@ export function PekerjaanDetailClient({
       <section className="rounded-xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="workflow-actions-title">
         <h3 id="workflow-actions-title" className="font-semibold text-slate-800 dark:text-slate-100">Aksi Alur Kerja</h3>
         <p className="mb-4 mt-1 text-xs text-slate-500 dark:text-slate-400">Pilihan ini membantu operasional; server tetap memvalidasi setiap kewenangan dan perubahan status.</p>
-        <PekerjaanTransitionControls status={pekerjaan.status} role={role} actions={transitionActions} />
+        <PekerjaanTransitionControls status={pekerjaan.status} role={role} actions={transitionActions} checklistProgress={checklist.progress} />
       </section>
+
+      <PekerjaanChecklistPanel pekerjaanId={pekerjaan.id} expectedUpdatedAt={pekerjaan.updatedAt} role={role} {...checklist} />
 
       <PekerjaanForm
         action={handleUpdate}

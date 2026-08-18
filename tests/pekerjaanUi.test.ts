@@ -26,3 +26,9 @@ test("timeline helper safely handles status and unknown metadata", () => {
     changedFields: ["unknown", 123],
   }, "STAF"), "Alur kerja diperbarui.");
 });
+
+test("checklist timeline descriptions expose only allowlisted operational metadata", () => {
+  assert.equal(safePekerjaanTimelineDescription("CHECKLIST_APPLY", { addedCount: 3, itemId: "secret" }, "STAF"), "3 item checklist ditambahkan.");
+  assert.equal(safePekerjaanTimelineDescription("CHECKLIST_ATTACHMENT_UPDATE", { operation: "ATTACH", attachmentCount: 2, archiveId: "secret", originalName: "PII.pdf" }, "STAF"), "Lampiran checklist ditambahkan; kini ada 2 lampiran pada item.");
+  assert.equal(safePekerjaanTimelineDescription("CHECKLIST_STATUS_CHANGE", { previousStatus: "TERLAMPIR", newStatus: "DITOLAK", rejectionReason: "private" }, "STAF"), "Status item checklist diubah dari Terlampir menjadi Ditolak.");
+});

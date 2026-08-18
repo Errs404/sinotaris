@@ -6,21 +6,25 @@ import type { PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import { visiblePekerjaanTransitions, type PekerjaanTransition } from "@/lib/pekerjaanUi";
+import type { ChecklistProgress } from "@/lib/checklistUi";
 
 export function PekerjaanTransitionControls({
   status,
   role,
   actions,
+  checklistProgress,
 }: {
   status: PekerjaanStatus;
   role: UserRole;
   actions: Partial<Record<PekerjaanStatus, () => Promise<void>>>;
+  checklistProgress: Pick<ChecklistProgress, "requiredTotal" | "requiredVerified">;
 }) {
   const router = useRouter();
   const { toast } = useToast();
   const [pending, setPending] = useState<PekerjaanTransition | null>(null);
   const [running, setRunning] = useState(false);
   const transitions = visiblePekerjaanTransitions(status, role);
+  const missingRequired = Math.max(0, checklistProgress.requiredTotal - checklistProgress.requiredVerified);
 
   async function runTransition(transition: PekerjaanTransition) {
     const action = actions[transition.nextStatus];
@@ -50,7 +54,7 @@ export function PekerjaanTransitionControls({
           <form
             key={transition.nextStatus}
             action={async () => {
-              if (transition.destructive) {
+              if (transition.destructive || (missingRequired > 0 && ["TANDA_TANGAN", "SELESAI"].includes(transition.nextStatus))) {
                 setPending(transition);
                 return;
               }
@@ -78,7 +82,9 @@ export function PekerjaanTransitionControls({
           setPending(null);
         }}
         title={`${pending?.label ?? "Ubah status"} pekerjaan?`}
-        description="Perubahan status akan dicatat pada riwayat aktivitas pekerjaan."
+        description={pending && missingRequired > 0 && ["TANDA_TANGAN", "SELESAI"].includes(pending.nextStatus)
+          ? `${missingRequired} dokumen wajib belum terverifikasi. Tetap lanjutkan?`
+          : "Perubahan status akan dicatat pada riwayat aktivitas pekerjaan."}
         confirmLabel={pending?.label ?? "Lanjutkan"}
         variant={pending?.nextStatus === "DIBATALKAN" ? "danger" : "warning"}
       />

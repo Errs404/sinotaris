@@ -133,6 +133,7 @@ function revalidatePekerjaan(id?: string) {
   revalidatePath("/dashboard/pekerjaan");
   if (id) revalidatePath(`/dashboard/pekerjaan/${id}`);
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/pengingat");
 }
 
 export async function createPekerjaanAction(formData: FormData) {

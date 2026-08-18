@@ -3,6 +3,9 @@
 // Jika langganan habis => mode read-only (data tetap bisa dilihat, tidak bisa tambah/ubah).
 
 import { prisma } from "@/lib/prisma";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
+
+type SubscriptionDb = PrismaClient | Prisma.TransactionClient;
 
 export interface SubscriptionState {
   active: boolean;
@@ -11,8 +14,8 @@ export interface SubscriptionState {
   periodEnd: Date | null;
 }
 
-export async function getSubscriptionState(officeId: string): Promise<SubscriptionState> {
-  const sub = await prisma.subscription.findFirst({
+export async function getSubscriptionState(officeId: string, db: SubscriptionDb = prisma): Promise<SubscriptionState> {
+  const sub = await db.subscription.findFirst({
     where: { officeId },
     orderBy: { currentPeriodEnd: "desc" },
   });
@@ -33,8 +36,8 @@ export async function getSubscriptionState(officeId: string): Promise<Subscripti
 }
 
 /** Lempar error kalau langganan tidak aktif — dipakai di server action / API tulis. */
-export async function assertWritable(officeId: string): Promise<void> {
-  const state = await getSubscriptionState(officeId);
+export async function assertWritable(officeId: string, db: SubscriptionDb = prisma): Promise<void> {
+  const state = await getSubscriptionState(officeId, db);
   if (state.readOnly) {
     throw new Error(
       "Langganan tidak aktif. Data tetap bisa dilihat (mode baca saja), tapi tidak bisa menambah atau mengubah data. Silakan perpanjang langganan.",

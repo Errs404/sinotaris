@@ -78,6 +78,9 @@ jobs:
       - name: Run checklist UI helper tests
         run: npm run test:checklist-ui
 
+      - name: Run dynamic reminder engine tests
+        run: npm run test:reminder-engine
+
       - name: Run lint checks
         run: npm run lint
 

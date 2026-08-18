@@ -87,6 +87,9 @@ enum AuditAction {
   CHECKLIST_APPLY
   CHECKLIST_ATTACHMENT_UPDATE
   CHECKLIST_STATUS_CHANGE
+  REMINDER_CREATE
+  REMINDER_STATUS_CHANGE
+  REMINDER_DELETE
 }
 
 enum AuditTargetType {
@@ -95,6 +98,7 @@ enum AuditTargetType {
   DOCUMENT_ARCHIVE
   GENERATED_DOC
   CHECKLIST_TEMPLATE
+  REMINDER
 }
 
 model AuditLog {
@@ -409,6 +413,7 @@ model Reminder {
   dueDate   DateTime
   done      Boolean      @default(false)
   createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   @@index([officeId, done, dueDate])
 }

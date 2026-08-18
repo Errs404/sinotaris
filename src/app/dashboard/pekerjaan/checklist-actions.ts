@@ -30,6 +30,7 @@ function revalidatePekerjaan(id: string) {
   revalidatePath(`/dashboard/pekerjaan/${id}`);
   revalidatePath("/dashboard/pekerjaan");
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/pengingat");
 }
 
 async function mutateChecklist<T>(run: Parameters<typeof prisma.$transaction>[0] extends (tx: infer D) => unknown

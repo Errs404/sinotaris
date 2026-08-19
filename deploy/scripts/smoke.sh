@@ -12,4 +12,4 @@ echo "Checking login page..."
 curl --fail --silent --show-error --max-time 20 --output /dev/null "$BASE_URL/login"
 
 echo "Smoke checks passed for $BASE_URL."
-echo "Also verify externally that TCP 5432 and 3000 are closed; Compose publishes neither port."
+echo "Also verify externally that TCP 5432 and 3000 are closed. In nginx mode, 3000 is bound to loopback only."

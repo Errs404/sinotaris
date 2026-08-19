@@ -44,12 +44,18 @@ env_value() {
 
 DOMAIN=$(env_value DOMAIN)
 ACME_EMAIL=$(env_value ACME_EMAIL)
+PROXY_MODE=$(env_value PROXY_MODE)
 POSTGRES_DB=$(env_value POSTGRES_DB)
 POSTGRES_USER=$(env_value POSTGRES_USER)
 POSTGRES_PASSWORD=$(env_value POSTGRES_PASSWORD)
 DATABASE_URL=$(env_value DATABASE_URL)
 AUTH_SECRET=$(env_value AUTH_SECRET)
 AUTH_URL=$(env_value AUTH_URL)
+
+case "$PROXY_MODE" in
+  nginx|caddy) ;;
+  *) echo "PROXY_MODE must be exactly nginx or caddy." >&2; exit 1 ;;
+esac
 
 case "$DOMAIN" in
   *.*) ;;
@@ -88,10 +94,14 @@ sudo install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /srv/sinotaris/backups
 
 GIT_SHA=$(git -C "$REPO_DIR" rev-parse --verify HEAD)
 SHORT_SHA=$(printf '%s' "$GIT_SHA" | cut -c1-12)
-export DOMAIN ACME_EMAIL POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DATABASE_URL AUTH_SECRET AUTH_URL GIT_SHA
+export DOMAIN ACME_EMAIL PROXY_MODE POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD DATABASE_URL AUTH_SECRET AUTH_URL GIT_SHA
 
 compose() {
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  if [ "$PROXY_MODE" = "nginx" ]; then
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$SCRIPT_DIR/compose.nginx.yml" "$@"
+  else
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  fi
 }
 
 echo "Validating Compose configuration..."
@@ -123,11 +133,21 @@ rollback_on_failure() {
   echo "Deployment smoke check failed. Database migrations are forward-only and are NOT rolled back." >&2
   if [ -n "$PREVIOUS_APP_IMAGE" ]; then
     echo "Restoring previous app image reference: $PREVIOUS_APP_IMAGE" >&2
-    APP_IMAGE_TAG=$PREVIOUS_APP_IMAGE compose up -d --no-build app caddy || \
-      echo "CRITICAL: automatic application rollback failed; inspect Compose immediately." >&2
+    if [ "$PROXY_MODE" = "nginx" ]; then
+      APP_IMAGE_TAG=$PREVIOUS_APP_IMAGE compose up -d --no-build app || \
+        echo "CRITICAL: automatic application rollback failed; host Nginx may return 502." >&2
+    else
+      APP_IMAGE_TAG=$PREVIOUS_APP_IMAGE compose up -d --no-build app caddy || \
+        echo "CRITICAL: automatic application rollback failed; inspect Compose immediately." >&2
+    fi
   else
-    echo "No previous app image exists; stopping app and Caddy to fail closed." >&2
-    compose stop caddy app || echo "CRITICAL: failed to stop first-deploy services." >&2
+    if [ "$PROXY_MODE" = "nginx" ]; then
+      echo "No previous app image exists; stopping app. Shared host Nginx is left running and may return 502." >&2
+      compose stop app || echo "CRITICAL: failed to stop first-deploy app." >&2
+    else
+      echo "No previous app image exists; stopping app and Caddy to fail closed." >&2
+      compose stop caddy app || echo "CRITICAL: failed to stop first-deploy services." >&2
+    fi
   fi
   exit "$status"
 }
@@ -135,12 +155,27 @@ trap rollback_on_failure EXIT
 trap 'exit 1' HUP INT TERM
 
 echo "Starting services without deleting volumes..."
-compose up -d --no-build db app caddy
+if [ "$PROXY_MODE" = "nginx" ]; then
+  compose up -d --no-build db app
+  sh "$SCRIPT_DIR/scripts/local-smoke.sh"
+  # Ensure a previously selected containerized proxy cannot contend for 80/443.
+  compose stop caddy >/dev/null 2>&1 || true
+  NGINX_SITE=/etc/nginx/sites-enabled/sinotaris.conf
+  [ -f "$NGINX_SITE" ] || {
+    echo "$NGINX_SITE must resolve to an installed file before nginx-mode deployment." >&2
+    exit 1
+  }
+  sudo nginx -t
+  sudo systemctl reload nginx
+else
+  compose up -d --no-build db app caddy
+fi
 DOMAIN=$DOMAIN sh "$SCRIPT_DIR/scripts/smoke.sh"
 trap - EXIT HUP INT TERM
 
 cat <<EOF
 Deployment health checks passed for git $GIT_SHA.
+Proxy mode: $PROXY_MODE
 Previous app image reference: ${PREVIOUS_APP_IMAGE:-none}
 Database migrations are forward-only. Never run 'docker compose down -v'.
 EOF

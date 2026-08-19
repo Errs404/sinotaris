@@ -26,6 +26,13 @@ COMPOSE_FILE="$DEPLOY_DIR/compose.yml"
 ENV_FILE="$DEPLOY_DIR/.env.production"
 BACKUP_ROOT=${BACKUP_ROOT:-/srv/sinotaris/backups}
 
+env_value() {
+  key=$1
+  value=$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1 | tr -d '\r')
+  [ -n "$value" ] || { echo "Required environment key $key is missing or empty." >&2; exit 1; }
+  printf '%s' "$value"
+}
+
 case "$BACKUP_ROOT" in
   /srv/sinotaris/backups) ;;
   /srv/sinotaris/*)
@@ -51,13 +58,22 @@ APP_WAS_RUNNING=0
 RESTART_FAILED=0
 
 [ -f "$ENV_FILE" ] || { echo "Missing $ENV_FILE" >&2; exit 1; }
+PROXY_MODE=$(env_value PROXY_MODE)
+case "$PROXY_MODE" in
+  nginx|caddy) ;;
+  *) echo "PROXY_MODE must be exactly nginx or caddy." >&2; exit 1 ;;
+esac
 [ ! -e "$FINAL_DIR" ] || { echo "Backup destination already exists." >&2; exit 1; }
 [ ! -e "$WORK_DIR" ] || { echo "Backup work directory already exists." >&2; exit 1; }
 GIT_SHA=$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || printf 'unknown')
 export GIT_SHA
 
 compose() {
-  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  if [ "$PROXY_MODE" = "nginx" ]; then
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" -f "$DEPLOY_DIR/compose.nginx.yml" "$@"
+  else
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+  fi
 }
 
 APP_CONTAINER=$(compose ps -a -q app 2>/dev/null || true)

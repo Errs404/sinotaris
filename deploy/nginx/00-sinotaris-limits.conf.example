@@ -1,0 +1,5 @@
+# Install as /etc/nginx/conf.d/00-sinotaris-limits.conf.
+# This file must be included inside Nginx's http {} context.
+limit_req_zone $binary_remote_addr zone=sinotaris_general:10m rate=10r/s;
+limit_req_zone $binary_remote_addr zone=sinotaris_auth:10m rate=5r/m;
+limit_req_zone $binary_remote_addr zone=sinotaris_expensive:10m rate=6r/m;

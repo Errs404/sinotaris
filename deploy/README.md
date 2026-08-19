@@ -6,7 +6,7 @@ This directory supports `sinotaris.reverse.my.id` with Docker Compose, PostgreSQ
 
 A staging environment or private pilot remains the default recommendation. Before public launch, an accountable operator must explicitly accept or close these blockers:
 
-- [ ] No application-level rate limiter is implemented. Neither supplied proxy configuration enables general request rate limiting; use a reviewed upstream WAF/proxy policy.
+- [ ] Nginx mode has native per-IP request throttling, but no application-aware limiter or distributed edge protection. Caddy mode has no limiter. Use a reviewed upstream WAF/proxy policy for broader DoS protection.
 - [ ] MFA is not implemented.
 - [ ] Central session revocation is not implemented.
 - [ ] OCR runs synchronously in the web process instead of a bounded background queue; concurrent OCR can exhaust the 2 GiB/2 CPU app limit.
@@ -92,9 +92,11 @@ sh deploy/install-nginx.sh
 The installer:
 
 - refuses root execution and refuses to overwrite `/etc/nginx/sites-enabled/sinotaris.conf`,
+- verifies that the standard `/etc/nginx/conf.d/*.conf` include is active inside Nginx's `http {}` configuration,
+- installs `deploy/nginx/00-sinotaris-limits.conf.example` as `/etc/nginx/conf.d/00-sinotaris-limits.conf`,
 - installs `deploy/nginx/sinotaris.bootstrap-http.conf.example`,
 - runs `sudo nginx -t`,
-- replaces a newly installed invalid site with an inert empty file and does not reload (remove or repair it from an attended console),
+- replaces both newly installed files with inert empty files if validation fails and does not reload (remove or repair them from an attended console),
 - reloads host Nginx only after validation.
 
 It does not request or modify certificates. From an attended console, use the host's approved Certbot workflow, for example:
@@ -113,13 +115,25 @@ Certbot may modify the enabled site. Review the resulting configuration against 
 - security headers and hidden upstream `Server`,
 - certificate paths and HTTPS redirect.
 
+Both Nginx site templates depend on zones defined at the required `http {}` scope in `/etc/nginx/conf.d/00-sinotaris-limits.conf`:
+
+- `sinotaris_general`: 10 requests/second per `$binary_remote_addr`, 10 MiB zone, burst 20 with `nodelay` for normal routes;
+- `sinotaris_auth`: 5 requests/minute per address, 10 MiB zone, burst 5 with `nodelay` for `/api/auth/`;
+- `sinotaris_expensive`: 6 requests/minute per address, 10 MiB zone, burst 3 with `nodelay` for `/api/dokumen/` generation routes;
+- rejected requests use HTTP 429;
+- exact `/api/health` is not rate limited and has access logging disabled.
+
+The general limiter applies in `location /`; the more specific auth/document locations select their stricter zones. `/api/arsip/` is intentionally left under the general limiter because it also serves downloads and a path-wide expensive limit would penalize legitimate reads. Archive upload/OCR uses Next Server Actions, whose POSTs target page/action requests rather than one stable API path, so standard Nginx path matching cannot isolate it reliably. Nginx `limit_req` is not safely conditional by HTTP method. Application-level user/tenant limits and a bounded OCR concurrency queue therefore remain public-production gates.
+
+These limits are basic per-source-IP throttling, not complete DoS protection. Because Nginx is directly public, `$binary_remote_addr` is the correct key. If Cloudflare or another proxy is added later, configure and restrict Nginx `real_ip` trust to that provider's verified address ranges before relying on forwarded client addresses; never blindly trust incoming `X-Forwarded-For`.
+
 An existing certificate issued for another domain is a certificate mismatch. Verify the certificate SAN and public HTTPS response for `sinotaris.reverse.my.id` before deployment.
 
 In nginx mode, `deploy.sh` starts only database/app, checks loopback health, stops any prior project Caddy container so it cannot contend for 80/443, requires `/etc/nginx/sites-enabled/sinotaris.conf`, runs `sudo nginx -t`, reloads Nginx, then runs the public HTTPS smoke test. It never starts Caddy.
 
 ### Optional containerized Caddy
 
-Set `PROXY_MODE=caddy`. The Nginx override is not loaded, and deployment starts database, app, and Caddy. Host Nginx must not already occupy ports 80/443. Standard Caddy has no native general-purpose rate limiter; none is faked here.
+Set `PROXY_MODE=caddy`. The Nginx override is not loaded, and deployment starts database, app, and Caddy. Host Nginx must not already occupy ports 80/443. Standard Caddy has no native general-purpose rate limiter; the Nginx zones do not protect Caddy mode and none is faked there.
 
 ## 4. Validate before public launch
 
@@ -184,6 +198,8 @@ sh deploy/scripts/smoke.sh
 sudo nginx -t
 unset GIT_SHA
 ```
+
+Smoke checks deliberately make only a few requests and do not brute-force or load-test production rate limits. Validate 429 behavior in staging with an approved, bounded test plan rather than generating attack-like traffic against the public host.
 
 Caddy mode omits `-f deploy/compose.nginx.yml` and may include `caddy` in logs.
 

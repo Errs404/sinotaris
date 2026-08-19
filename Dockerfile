@@ -3,6 +3,9 @@ ARG NODE_IMAGE=node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489
 
 FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 # The project postinstall runs Prisma generation, but schema/source are copied only
 # in the builder stage. Install deterministically here and generate after COPY.
@@ -24,7 +27,8 @@ ENV NODE_ENV=production \
     npm_config_cache=/tmp/npm-cache
 RUN groupadd --system --gid 1001 nodejs \
     && useradd --system --uid 1001 --gid nodejs --home-dir /app --shell /usr/sbin/nologin nextjs
-COPY --from=builder /app/src/generated ./src/generated
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated ./src/generated
 COPY prisma.config.ts package.json package-lock.json ./
 COPY prisma ./prisma
 USER 1001:1001

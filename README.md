@@ -32,7 +32,7 @@ Pengembangan lanjutan dari [skmht-generator](https://github.com/Errs404/skmht-ge
    npx auth secret   # atau isi manual
    ```
 
-3. Install, migrasi, seed:
+3. Install, migrasi, lalu isi `SEED_EMAIL` dan `SEED_PASSWORD` unik (minimal 16 karakter) sebelum seed satu kali:
 
    ```powershell
    npm install
@@ -46,7 +46,7 @@ Pengembangan lanjutan dari [skmht-generator](https://github.com/Errs404/skmht-ge
    npm run dev
    ```
 
-   Buka http://localhost:3000 — login default: `notaris@sinotaris.local` / `sinotaris123`.
+   Buka http://localhost:3000 dan login dengan kredensial seed yang Anda tentukan. Tidak ada kredensial default.
 
 ## Struktur
 

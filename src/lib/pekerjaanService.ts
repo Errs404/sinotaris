@@ -361,6 +361,12 @@ export async function deletePekerjaanForActor(
   if (existing._count.checklistItems > 0) {
     throw new Error("Pekerjaan yang memiliki checklist tidak dapat dihapus permanen. Batalkan pekerjaan agar riwayat checklist tetap tersimpan.");
   }
+  const permanentInvoiceCount = await db.invoice.count({
+    where: { pekerjaanId: existing.id, officeId: actor.officeId, status: { not: "DRAFT" } },
+  });
+  if (permanentInvoiceCount > 0) {
+    throw new Error("Pekerjaan yang memiliki tagihan terbit atau dibatalkan tidak dapat dihapus permanen. Pertahankan pekerjaan untuk menjaga catatan keuangan.");
+  }
   const documents = await db.generatedDoc.updateMany({
     where: { pekerjaanId: existing.id },
     data: { pekerjaanId: null },

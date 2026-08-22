@@ -38,6 +38,8 @@ model Office {
   checklistTemplates   ChecklistTemplate[]
   checklistItems       PekerjaanChecklistItem[]
   checklistAttachments PekerjaanChecklistAttachment[]
+  payments             Payment[]
+  sequences            OfficeSequence[]
 }
 
 enum UserRole {
@@ -61,6 +63,11 @@ model User {
   assignedPekerjaan      Pekerjaan[]                    @relation("PekerjaanPic")
   verifiedChecklistItems PekerjaanChecklistItem[]       @relation("ChecklistVerifiedBy")
   checklistAttachments   PekerjaanChecklistAttachment[] @relation("ChecklistAttachmentCreatedBy")
+  createdInvoices        Invoice[]                      @relation("InvoiceCreatedBy")
+  issuedInvoices         Invoice[]                      @relation("InvoiceIssuedBy")
+  voidedInvoices         Invoice[]                      @relation("InvoiceVoidedBy")
+  recordedPayments       Payment[]                      @relation("PaymentRecordedBy")
+  voidedPayments         Payment[]                      @relation("PaymentVoidedBy")
 }
 
 enum AuditAction {
@@ -90,6 +97,13 @@ enum AuditAction {
   REMINDER_CREATE
   REMINDER_STATUS_CHANGE
   REMINDER_DELETE
+  INVOICE_CREATE
+  INVOICE_UPDATE
+  INVOICE_DELETE
+  INVOICE_ISSUE
+  INVOICE_VOID
+  PAYMENT_CREATE
+  PAYMENT_VOID
 }
 
 enum AuditTargetType {
@@ -99,6 +113,8 @@ enum AuditTargetType {
   GENERATED_DOC
   CHECKLIST_TEMPLATE
   REMINDER
+  INVOICE
+  PAYMENT
 }
 
 model AuditLog {
@@ -362,37 +378,116 @@ enum InvoiceStatus {
   TERKIRIM
   LUNAS
   DIBATALKAN
+  TERBIT
+  VOID
+}
+
+enum InvoiceItemCategory {
+  HONORARIUM
+  BIAYA_PROSES
+  TITIPAN_PAJAK
+  TITIPAN_PNBP
+  PAJAK_JASA
+  LAINNYA
+}
+
+enum PaymentStatus {
+  AKTIF
+  VOID
+}
+
+enum PaymentMethod {
+  TRANSFER
+  TUNAI
+  CEK_GIRO
+  LAINNYA
 }
 
 model Invoice {
-  id          String        @id @default(cuid())
-  officeId    String
-  office      Office        @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  number      String // mis. "INV/2026/001"
-  clientId    String
-  client      Client        @relation(fields: [clientId], references: [id])
-  pekerjaanId String?
-  pekerjaan   Pekerjaan?    @relation(fields: [pekerjaanId], references: [id])
-  status      InvoiceStatus @default(DRAFT)
-  issuedAt    DateTime      @default(now())
-  dueDate     DateTime?
-  paidAt      DateTime?
-  notes       String?
-  items       InvoiceItem[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  officeId     String
+  office       Office        @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  number       String?
+  clientId     String
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  pekerjaanId  String?
+  pekerjaan    Pekerjaan?    @relation(fields: [pekerjaanId], references: [id], onDelete: SetNull)
+  status       InvoiceStatus @default(DRAFT)
+  issuedAt     DateTime?
+  dueDate      DateTime?     @db.Date
+  notes        String?       @db.Text
+  totalAmount  Decimal       @default(0) @db.Decimal(18, 2)
+  totalPaid    Decimal       @default(0) @db.Decimal(18, 2)
+  version      Int           @default(1)
+  snapshotJson Json?
+  createdById  String?
+  createdBy    User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  issuedById   String?
+  issuedBy     User?         @relation("InvoiceIssuedBy", fields: [issuedById], references: [id], onDelete: SetNull)
+  voidedById   String?
+  voidedBy     User?         @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  voidedAt     DateTime?
+  voidReason   String?       @db.Text
+  items        InvoiceItem[]
+  payments     Payment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([officeId, number])
-  @@index([officeId, status])
+  @@index([officeId, status, dueDate])
+  @@index([officeId, clientId])
+  @@index([officeId, pekerjaanId])
 }
 
 model InvoiceItem {
-  id        String  @id @default(cuid())
+  id        String              @id @default(cuid())
   invoiceId String
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice   Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  category  InvoiceItemCategory
   desc      String
-  qty       Int     @default(1)
-  amount    Decimal @db.Decimal(18, 2)
+  qty       Int                 @default(1)
+  unitPrice Decimal             @db.Decimal(18, 2)
+  lineTotal Decimal             @db.Decimal(18, 2)
+  sortOrder Int                 @default(0)
+
+  @@index([invoiceId, sortOrder])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  officeId      String
+  office        Office        @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  invoiceId     String
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  amount        Decimal       @db.Decimal(18, 2)
+  paidAt        DateTime
+  recordedAt    DateTime      @default(now())
+  method        PaymentMethod
+  receiptNumber String
+  requestKey    String
+  reference     String?
+  notes         String?       @db.Text
+  recordedById  String?
+  recordedBy    User?         @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: SetNull)
+  status        PaymentStatus @default(AKTIF)
+  voidedById    String?
+  voidedBy      User?         @relation("PaymentVoidedBy", fields: [voidedById], references: [id], onDelete: SetNull)
+  voidedAt      DateTime?
+  voidReason    String?       @db.Text
+
+  @@unique([officeId, receiptNumber])
+  @@unique([officeId, requestKey])
+  @@index([invoiceId, status])
+  @@index([officeId, paidAt])
+}
+
+model OfficeSequence {
+  officeId  String
+  office    Office @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  key       String
+  lastValue Int    @default(0)
+
+  @@id([officeId, key])
 }
 
 // ===== Pengingat =====

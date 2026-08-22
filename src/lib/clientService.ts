@@ -74,6 +74,11 @@ export async function deleteClientForActor(db: DbClient, actor: ClientActor, id:
   });
   if (!existing) throw new Error("Klien tidak ditemukan.");
 
+  const invoiceCount = await db.invoice.count({ where: { clientId: existing.id, officeId: actor.officeId } });
+  if (invoiceCount > 0) {
+    throw new Error("Klien yang memiliki riwayat tagihan tidak dapat dihapus. Pertahankan klien untuk menjaga catatan keuangan.");
+  }
+
   const archives = await db.documentArchive.updateMany({
     where: { clientId: existing.id, officeId: actor.officeId },
     data: { clientId: null, status: "PERLU_REVIEW" },

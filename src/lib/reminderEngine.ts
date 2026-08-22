@@ -40,6 +40,23 @@ export type DynamicReminderFilters = {
   query?: string;
 };
 
+export type FinanceReminderCandidate = {
+  id: string;
+  dueDate: Date | null;
+  client: { name: string };
+};
+
+export type FinanceReminder = {
+  id: string;
+  invoiceId: string;
+  title: string;
+  clientName: string;
+  dueDate: string;
+  daysUntilDue: number;
+  severity: "KRITIS" | "PERINGATAN";
+  link: string;
+};
+
 const DAY_MS = 86_400_000;
 const TERMINAL = new Set<PekerjaanStatus>(["SELESAI", "DIBATALKAN"]);
 
@@ -125,5 +142,22 @@ export function paginateDynamicReminders(reminders: DynamicReminder[], page: num
     totalItems,
     totalPages,
     currentPage,
+  };
+}
+
+export function buildFinanceReminder(candidate: FinanceReminderCandidate, today: Date): FinanceReminder | null {
+  if (!candidate.dueDate) return null;
+  const dueDate = new Date(candidate.dueDate);
+  const daysUntilDue = Math.round((dueDate.getTime() - today.getTime()) / DAY_MS);
+  if (daysUntilDue > 3) return null;
+  return {
+    id: `invoice:${candidate.id}`,
+    invoiceId: candidate.id,
+    title: `Tagihan ${candidate.client.name}`,
+    clientName: candidate.client.name,
+    dueDate: dueDate.toISOString().slice(0, 10),
+    daysUntilDue,
+    severity: daysUntilDue <= 0 ? "KRITIS" : "PERINGATAN",
+    link: `/dashboard/invoice/${candidate.id}`,
   };
 }

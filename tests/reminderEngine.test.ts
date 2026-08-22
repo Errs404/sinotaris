@@ -6,6 +6,7 @@ import {
   filterDynamicReminders,
   paginateDynamicReminders,
   type DynamicReminderCandidate,
+  buildFinanceReminder,
 } from "../src/lib/reminderEngine";
 
 const today = new Date("2026-08-19T00:00:00.000Z");
@@ -19,6 +20,17 @@ test("due-date alerts cover overdue, today, H+1, H+3, and exclude H+4", () => {
   for (const days of [-2, 0]) assert.equal(buildDynamicReminder({ ...base, dueDate: due(days) }, today)?.severity, "KRITIS");
   for (const days of [1, 3]) assert.equal(buildDynamicReminder({ ...base, dueDate: due(days) }, today)?.severity, "PERINGATAN");
   assert.equal(buildDynamicReminder({ ...base, dueDate: due(4) }, today), null);
+});
+
+test("finance reminders cover overdue through H+3 without exposing amount or invoice number", () => {
+  const candidate = { id: "invoice-1", client: { name: "Klien Aman" }, dueDate: today };
+  assert.equal(buildFinanceReminder(candidate, today)?.severity, "KRITIS");
+  assert.equal(buildFinanceReminder({ ...candidate, dueDate: due(3) }, today)?.severity, "PERINGATAN");
+  assert.equal(buildFinanceReminder({ ...candidate, dueDate: due(4) }, today), null);
+  assert.equal(buildFinanceReminder({ ...candidate, dueDate: null }, today), null);
+  const serialized = JSON.stringify(buildFinanceReminder(candidate, today));
+  assert.equal(serialized.includes("amount"), false);
+  assert.equal(serialized.includes("number"), false);
 });
 
 test("complete checklist does not suppress due alerts", () => {

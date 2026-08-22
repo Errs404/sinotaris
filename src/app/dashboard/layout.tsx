@@ -30,7 +30,7 @@ export default async function DashboardLayout({
   const subscription = await getSubscriptionState(session.user.officeId);
   const navItems = session.user.role === "NOTARIS"
     ? allNavItems
-    : allNavItems.filter((item) => item.href !== "/dashboard/arsip");
+    : allNavItems.filter((item) => item.href !== "/dashboard/arsip" && item.href !== "/dashboard/invoice");
 
   return (
     <ToastProvider>

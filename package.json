@@ -19,7 +19,7 @@
     "test:checklist-ui": "node --import tsx --test tests/checklistUi.test.ts",
     "test:reminder-engine": "node --import tsx --test tests/reminderEngine.test.ts",
     "test:integration:guard": "node --import tsx --test --test-concurrency=1 tests/integration/databaseGuard.test.ts",
-    "test:integration": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/audit.integration.test.ts tests/integration/checklist.integration.test.ts tests/integration/reminder.integration.test.ts tests/integration/tenant.integration.test.ts",
+    "test:integration": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/*.integration.test.ts",
     "test:integration:audit": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/audit.integration.test.ts"
   },
   "dependencies": {

@@ -71,9 +71,11 @@ export default async function DashboardPage() {
       prisma.pekerjaan.count({
         where: { officeId, createdAt: { gte: startOfMonth } },
       }),
-      prisma.invoice.count({
-        where: { officeId, status: "TERKIRIM" },
-      }),
+      isNotaris
+        ? prisma.invoice.count({
+            where: { officeId, status: "TERBIT", totalPaid: { lt: prisma.invoice.fields.totalAmount } },
+          })
+        : 0,
       prisma.reminder.findMany({
         where: { officeId, done: false },
         orderBy: { dueDate: "asc" },
@@ -127,7 +129,7 @@ export default async function DashboardPage() {
     { label: "Total Klien", value: totalKlien, icon: Users, color: "text-indigo-600 bg-indigo-100" },
     { label: "Pekerjaan Berjalan", value: pekerjaanBerjalan, icon: Briefcase, color: "text-amber-600 bg-amber-100" },
     { label: "Bulan Ini", value: pekerjaanBulanIni, icon: FileText, color: "text-teal-600 bg-teal-100" },
-    { label: "Invoice Belum Lunas", value: invoiceBelumLunas, icon: Receipt, color: "text-rose-600 bg-rose-100" },
+    ...(isNotaris ? [{ label: "Invoice Belum Lunas", value: invoiceBelumLunas, icon: Receipt, color: "text-rose-600 bg-rose-100" }] : []),
   ];
 
   const quickActions = [

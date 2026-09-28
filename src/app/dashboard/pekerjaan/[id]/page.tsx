@@ -31,12 +31,14 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
         status: true, keterangan: true, bentukHukum: true, pihakAlih: true, pihakTerima: true,
         luasTanah: true, luasBangunan: true, hargaTransaksi: true, nop: true, bphtb: true,
         pphFinal: true, honorarium: true, picId: true, dueDate: true, priority: true,
-        internalNotes: true, completedAt: true, updatedAt: true,
-        clients: {
+         internalNotes: true, completedAt: true, updatedAt: true,
+         dossierStage: true, signingScheduledAt: true, signingLocation: true,
+         clients: {
           where: { client: { officeId } },
-          select: { clientId: true, peran: true, client: { select: { name: true } } },
+           select: { clientId: true, peran: true, capacity: true, client: { select: { name: true } } },
           orderBy: { peran: "asc" },
-        },
+         },
+         landObjects: { orderBy: { sortOrder: "asc" }, select: { label: true, hakType: true, certificateNumber: true, nib: true, nop: true, address: true, luasTanah: true, luasBangunan: true } },
         checklistItems: {
           orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
           select: {
@@ -101,6 +103,7 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
     tanggalAkta: pekerjaan.tanggalAkta?.toISOString() ?? null,
     dueDate: pekerjaan.dueDate?.toISOString() ?? null,
     completedAt: pekerjaan.completedAt?.toISOString() ?? null,
+    signingScheduledAt: pekerjaan.signingScheduledAt?.toISOString() ?? null,
     updatedAt: pekerjaan.updatedAt.toISOString(),
     luasTanah: pekerjaan.luasTanah?.toString() ?? null,
     luasBangunan: pekerjaan.luasBangunan?.toString() ?? null,
@@ -108,7 +111,8 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
     bphtb: pekerjaan.bphtb?.toString() ?? null,
     pphFinal: pekerjaan.pphFinal?.toString() ?? null,
     honorarium: session!.user.role === "NOTARIS" ? pekerjaan.honorarium?.toString() ?? null : undefined,
-    clients: pekerjaan.clients.map((party) => ({ clientId: party.clientId, peran: party.peran, name: party.client.name })),
+    clients: pekerjaan.clients.map((party) => ({ clientId: party.clientId, peran: party.peran, capacity: party.capacity ?? "", name: party.client.name })),
+    landObjects: pekerjaan.landObjects.map((item) => ({ ...item, label: item.label ?? "", hakType: item.hakType ?? "", certificateNumber: item.certificateNumber ?? "", nib: item.nib ?? "", nop: item.nop ?? "", address: item.address ?? "", luasTanah: item.luasTanah?.toString() ?? "", luasBangunan: item.luasBangunan?.toString() ?? "" })),
   };
 
   const expectedUpdatedAt = pekerjaan.updatedAt.toISOString();

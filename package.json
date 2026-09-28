@@ -18,6 +18,9 @@
     "test:pekerjaan-ui": "node --import tsx --test tests/pekerjaanUi.test.ts",
     "test:checklist-ui": "node --import tsx --test tests/checklistUi.test.ts",
     "test:reminder-engine": "node --import tsx --test tests/reminderEngine.test.ts",
+    "test:offline-license": "node --import tsx --test tests/offlineLicense.test.ts",
+    "license:keygen": "tsx scripts/license-keygen.ts",
+    "license:issue": "tsx scripts/license-issue.ts",
     "test:integration:guard": "node --import tsx --test --test-concurrency=1 tests/integration/databaseGuard.test.ts",
     "test:integration": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/*.integration.test.ts",
     "test:integration:audit": "node --import tsx --import ./tests/integration/setup.ts --test --test-concurrency=1 tests/integration/audit.integration.test.ts"

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { PekerjaanKind, PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
+import type { DossierStage, PekerjaanKind, PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { Breadcrumb } from "@/components/Breadcrumb";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
@@ -10,6 +10,7 @@ import { pekerjaanStatusClass, pekerjaanStatusLabel } from "@/lib/pekerjaanUi";
 import type { ChecklistProgress } from "@/lib/checklistUi";
 import { PekerjaanForm, type PekerjaanUserOption } from "../PekerjaanForm";
 import type { ClientOption } from "../PihakEditor";
+import type { LandObjectValue } from "../LandObjectEditor";
 import { PekerjaanTransitionControls } from "./PekerjaanTransitionControls";
 import { PekerjaanChecklistPanel, type ChecklistArchiveDto, type PekerjaanChecklistItemDto } from "./PekerjaanChecklistPanel";
 
@@ -37,8 +38,12 @@ export type PekerjaanDetailDto = {
   priority: PekerjaanPriority;
   internalNotes: string | null;
   completedAt: string | null;
+  dossierStage: DossierStage;
+  signingScheduledAt: string | null;
+  signingLocation: string | null;
   updatedAt: string;
-  clients: Array<{ clientId: string; peran: string; name: string }>;
+  clients: Array<{ clientId: string; peran: string; capacity: string; name: string }>;
+  landObjects: LandObjectValue[];
 };
 
 export type PekerjaanTimelineItem = {
@@ -56,6 +61,11 @@ const timelineLabel = {
   workflow: "Alur kerja diperbarui",
   status: "Status diperbarui",
   checklist: "Checklist diperbarui",
+};
+
+const dossierStageLabel: Record<DossierStage, string> = {
+  PENGUMPULAN_DATA: "Pengumpulan Data", PENYUSUNAN_DRAFT: "Penyusunan Draft", SIAP_TANDA_TANGAN: "Siap Tanda Tangan",
+  SUDAH_TANDA_TANGAN: "Sudah Tanda Tangan", PROSES_INSTANSI: "Proses Instansi", SELESAI: "Selesai", DIBATALKAN: "Dibatalkan",
 };
 
 export function PekerjaanDetailClient({
@@ -106,6 +116,11 @@ export function PekerjaanDetailClient({
           <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${pekerjaanStatusClass[pekerjaan.status]}`}>
             {pekerjaanStatusLabel[pekerjaan.status]}
           </span>
+          <span className="ml-2 inline-flex rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">{dossierStageLabel[pekerjaan.dossierStage]}</span>
+          <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p>Para pihak: <strong>{pekerjaan.clients.length}</strong>{pekerjaan.kind === "PPAT" && <> · Objek tanah: <strong>{pekerjaan.landObjects.length}</strong></>}</p>
+            {pekerjaan.signingScheduledAt && <p>Jadwal tanda tangan: <strong>{new Date(pekerjaan.signingScheduledAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" })}</strong>{pekerjaan.signingLocation ? ` · ${pekerjaan.signingLocation}` : ""}</p>}
+          </div>
         </div>
         {deleteAction && (
           <button type="button" onClick={() => setShowDelete(true)} className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500">
@@ -130,7 +145,8 @@ export function PekerjaanDetailClient({
         clients={clients}
         users={users}
         currentActorId={currentActorId}
-        parties={pekerjaan.clients.map(({ clientId, peran }) => ({ clientId, peran }))}
+        parties={pekerjaan.clients.map(({ clientId, peran, capacity }) => ({ clientId, peran, capacity }))}
+        landObjects={pekerjaan.landObjects}
       />
 
       <section className="max-w-3xl rounded-xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800" aria-labelledby="timeline-title">
@@ -145,7 +161,7 @@ export function PekerjaanDetailClient({
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{timelineLabel[item.category]}</p>
                   <time dateTime={item.createdAt} className="text-xs text-slate-500 dark:text-slate-400">
-                    {new Date(item.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short" })}
+                    {new Date(item.createdAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" })}
                   </time>
                 </div>
                 <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.description}</p>

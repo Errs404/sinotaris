@@ -31,6 +31,10 @@ const TIMELINE_FIELD_LABELS: Record<string, string> = {
   dueDate: "tanggal jatuh tempo",
   priority: "prioritas",
   internalNotes: "catatan internal",
+  dossierStage: "tahap dossier",
+  signingScheduledAt: "jadwal tanda tangan",
+  signingLocation: "lokasi tanda tangan",
+  landObjects: "objek tanah",
 };
 
 const FINANCIAL_TIMELINE_FIELDS = new Set(["hargaTransaksi", "bphtb", "pphFinal", "honorarium"]);

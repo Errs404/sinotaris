@@ -72,7 +72,7 @@ export default async function DashboardLayout({
           />
           {subscription.readOnly && (
             <div className="bg-amber-500 px-6 py-2 text-center text-sm font-medium text-white">
-              Langganan tidak aktif — mode baca saja. Perpanjang langganan untuk
+              Lisensi tidak aktif — mode baca saja. Aktifkan atau perpanjang lisensi untuk
               menambah atau mengubah data.
             </div>
           )}

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireSession } from "@/auth";
-import type { PekerjaanPriority, PekerjaanStatus } from "@/generated/prisma/enums";
+import type { DossierStage, PekerjaanPriority, PekerjaanStatus } from "@/generated/prisma/enums";
 import { requireCurrentActor } from "@/lib/currentActor";
 import {
   createPekerjaanForActor,
@@ -11,17 +11,19 @@ import {
   transitionPekerjaanForActor,
   updatePekerjaanForActor,
   type PekerjaanPartyInput,
+  type PekerjaanLandObjectInput,
 } from "@/lib/pekerjaanService";
 import { prisma } from "@/lib/prisma";
 import { assertWritable } from "@/lib/subscription";
 
 const PRIORITIES: PekerjaanPriority[] = ["RENDAH", "NORMAL", "TINGGI"];
 const STATUSES: PekerjaanStatus[] = ["MASUK", "PROSES", "TANDA_TANGAN", "SELESAI", "DIBATALKAN"];
+const DOSSIER_STAGES: DossierStage[] = ["PENGUMPULAN_DATA", "PENYUSUNAN_DRAFT", "SIAP_TANDA_TANGAN", "SUDAH_TANDA_TANGAN", "PROSES_INSTANSI", "SELESAI", "DIBATALKAN"];
 const FORM_KEYS = [
   "kind", "jenis", "judul", "nomorAkta", "tanggalAkta", "keterangan", "bentukHukum",
   "pihakAlih", "pihakTerima", "luasTanah", "luasBangunan", "hargaTransaksi", "nop",
   "bphtb", "pphFinal", "honorarium", "picId", "dueDate", "priority", "internalNotes",
-  "partiesJson",
+  "partiesJson", "landObjectsJson", "dossierStage", "signingScheduledAt", "signingLocation",
 ] as const;
 
 function requireFormKeys(formData: FormData, role: "NOTARIS" | "STAF", update = false) {
@@ -46,10 +48,38 @@ function partiesFromForm(formData: FormData): PekerjaanPartyInput[] {
     if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Data para pihak tidak valid.");
     const clientId = String((item as Record<string, unknown>).clientId ?? "").trim();
     const peran = String((item as Record<string, unknown>).peran ?? "").trim();
+    const capacity = String((item as Record<string, unknown>).capacity ?? "").trim() || null;
     if (!clientId || !peran) throw new Error("Setiap pihak wajib memiliki klien dan peran.");
-    unique.set(`${clientId}:${peran.toLowerCase()}`, { clientId, peran });
+    unique.set(`${clientId}:${peran.toLowerCase()}`, { clientId, peran, capacity });
   }
   return [...unique.values()];
+}
+
+function decimalValue(value: unknown, label: string): number | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const normalized = raw.replace(/\s/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".");
+  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) throw new Error(`${label} harus berupa angka non-negatif dengan maksimal 2 desimal.`);
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed > 9_999_999_999.99) throw new Error(`${label} melebihi batas yang diizinkan.`);
+  return parsed;
+}
+
+function landObjectsFromForm(formData: FormData): PekerjaanLandObjectInput[] {
+  let parsed: unknown;
+  try { parsed = JSON.parse(String(formData.get("landObjectsJson") ?? "[]")); } catch { throw new Error("Data objek tanah tidak valid."); }
+  if (!Array.isArray(parsed)) throw new Error("Data objek tanah tidak valid.");
+  return parsed.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new Error("Data objek tanah tidak valid.");
+    const value = item as Record<string, unknown>;
+    const str = (key: string) => String(value[key] ?? "").trim() || null;
+    return {
+      label: str("label"), hakType: str("hakType"), certificateNumber: str("certificateNumber"),
+      nib: str("nib"), nop: str("nop"), address: str("address"),
+      luasTanah: decimalValue(value.luasTanah, `Luas tanah objek ${index + 1}`),
+      luasBangunan: decimalValue(value.luasBangunan, `Luas bangunan objek ${index + 1}`),
+    };
+  });
 }
 
 function strictDateOnly(value: string | null, label: string): Date | null {
@@ -110,6 +140,9 @@ function workflowDataFromForm(formData: FormData) {
     dueDate?: Date | null;
     priority?: PekerjaanPriority;
     internalNotes?: string | null;
+    dossierStage?: DossierStage;
+    signingScheduledAt?: Date | null;
+    signingLocation?: string | null;
   } = {};
   if (formData.has("picId")) data.picId = String(formData.get("picId") ?? "").trim() || null;
   if (formData.has("dueDate")) {
@@ -125,6 +158,36 @@ function workflowDataFromForm(formData: FormData) {
     const notes = String(formData.get("internalNotes") ?? "").trim() || null;
     if (notes && notes.length > 5000) throw new Error("Catatan internal maksimal 5000 karakter.");
     data.internalNotes = notes;
+  }
+  if (formData.has("dossierStage")) {
+    const stage = String(formData.get("dossierStage") ?? "") as DossierStage;
+    if (!DOSSIER_STAGES.includes(stage)) throw new Error("Tahap dossier tidak valid.");
+    data.dossierStage = stage;
+  }
+  if (formData.has("signingScheduledAt")) {
+    const value = String(formData.get("signingScheduledAt") ?? "").trim();
+    if (!value) data.signingScheduledAt = null;
+    else {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) throw new Error("Jadwal tanda tangan tidak valid.");
+      const [datePart, timePart] = value.split("T");
+      const [year, month, day] = datePart.split("-").map(Number);
+      const [hour, minute] = timePart.split(":").map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day, hour - 7, minute));
+      const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hour12: false,
+      }).formatToParts(date).map((part) => [part.type, part.value]));
+      if (Number.isNaN(date.getTime()) || Number(parts.year) !== year || Number(parts.month) !== month
+        || Number(parts.day) !== day || Number(parts.hour) !== hour || Number(parts.minute) !== minute) {
+        throw new Error("Jadwal tanda tangan bukan tanggal dan waktu kalender yang valid.");
+      }
+      data.signingScheduledAt = date;
+    }
+  }
+  if (formData.has("signingLocation")) {
+    const location = String(formData.get("signingLocation") ?? "").trim() || null;
+    if (location && location.length > 500) throw new Error("Lokasi tanda tangan maksimal 500 karakter.");
+    data.signingLocation = location;
   }
   return data;
 }
@@ -143,13 +206,18 @@ export async function createPekerjaanAction(formData: FormData) {
   requireFormKeys(formData, actor.role);
   const data = { ...pekerjaanDataFromForm(formData), ...workflowDataFromForm(formData) };
   const parties = partiesFromForm(formData);
+  const landObjects = landObjectsFromForm(formData);
+  const primaryLand = landObjects[0];
+  data.nop = data.kind === "PPAT" ? primaryLand?.nop ?? null : null;
+  data.luasTanah = data.kind === "PPAT" ? primaryLand?.luasTanah ?? null : null;
+  data.luasBangunan = data.kind === "PPAT" ? primaryLand?.luasBangunan ?? null : null;
   if (!data.jenis || !data.judul) throw new Error("Jenis dan judul pekerjaan wajib diisi.");
   if (actor.role !== "NOTARIS") data.honorarium = null;
 
   await prisma.$transaction(async (tx) => {
     const transactionalActor = await requireCurrentActor(session.user.id, tx);
     if (transactionalActor.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
-    await createPekerjaanForActor(tx, transactionalActor, data, parties);
+    await createPekerjaanForActor(tx, transactionalActor, data, parties, landObjects);
   });
   revalidatePekerjaan();
   redirect("/dashboard/pekerjaan");
@@ -162,6 +230,11 @@ export async function updatePekerjaanAction(id: string, formData: FormData) {
   requireFormKeys(formData, actor.role, true);
   const data = { ...pekerjaanDataFromForm(formData), ...workflowDataFromForm(formData) };
   const parties = partiesFromForm(formData);
+  const landObjects = landObjectsFromForm(formData);
+  const primaryLand = landObjects[0];
+  data.nop = data.kind === "PPAT" ? primaryLand?.nop ?? null : null;
+  data.luasTanah = data.kind === "PPAT" ? primaryLand?.luasTanah ?? null : null;
+  data.luasBangunan = data.kind === "PPAT" ? primaryLand?.luasBangunan ?? null : null;
   const expectedUpdatedAt = expectedDate(String(formData.get("expectedUpdatedAt") ?? "").trim() || null);
   if (!data.jenis || !data.judul) throw new Error("Jenis dan judul pekerjaan wajib diisi.");
   const updateData = actor.role === "NOTARIS"
@@ -171,7 +244,7 @@ export async function updatePekerjaanAction(id: string, formData: FormData) {
   await prisma.$transaction(async (tx) => {
     const transactionalActor = await requireCurrentActor(session.user.id, tx);
     if (transactionalActor.officeId !== actor.officeId) throw new Error("Kantor pengguna berubah. Silakan masuk kembali.");
-    await updatePekerjaanForActor(tx, transactionalActor, id, expectedUpdatedAt, updateData, parties);
+    await updatePekerjaanForActor(tx, transactionalActor, id, expectedUpdatedAt, updateData, parties, landObjects);
   });
   revalidatePekerjaan(id);
 }

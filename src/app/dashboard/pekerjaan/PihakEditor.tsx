@@ -12,6 +12,7 @@ export interface ClientOption {
 export interface PihakValue {
   clientId: string;
   peran: string;
+  capacity: string;
 }
 
 const commonRoles = [
@@ -40,7 +41,7 @@ export function PihakEditor({
   function addItem() {
     setItems((current) => [
       ...current,
-      { clientId: clients[0]?.id ?? "", peran: "Penghadap" },
+      { clientId: clients[0]?.id ?? "", peran: "Penghadap", capacity: "Bertindak untuk diri sendiri" },
     ]);
   }
 
@@ -111,6 +112,10 @@ export function PihakEditor({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Kapasitas Bertindak</label>
+                <input value={item.capacity} maxLength={500} onChange={(event) => updateItem(index, "capacity", event.target.value)} placeholder="Contoh: Bertindak untuk diri sendiri / berdasarkan kuasa / mewakili PT..." className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">

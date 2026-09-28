@@ -81,6 +81,9 @@ jobs:
       - name: Run dynamic reminder engine tests
         run: npm run test:reminder-engine
 
+      - name: Run offline license tests
+        run: npm run test:offline-license
+
       - name: Run lint checks
         run: npm run lint
 

@@ -14,20 +14,22 @@ datasource db {
 // ===== Tenant & Auth =====
 
 model Office {
-  id            String   @id @default(cuid())
-  name          String // Nama kantor, mis. "Kantor Notaris & PPAT Budi, S.H., M.Kn."
-  notarisName   String // Nama notaris pemilik
-  notarisTitle  String? // Gelar, mis. "S.H., M.Kn."
-  address       String?
-  phone         String?
-  wilayahKerja  String? // mis. "Provinsi Jawa Tengah"
-  skNotarisNo   String? // Nomor SK pengangkatan
-  skNotarisDate String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                        String    @id @default(cuid())
+  name                      String // Nama kantor, mis. "Kantor Notaris & PPAT Budi, S.H., M.Kn."
+  notarisName               String // Nama notaris pemilik
+  notarisTitle              String? // Gelar, mis. "S.H., M.Kn."
+  address                   String?
+  phone                     String?
+  wilayahKerja              String? // mis. "Provinsi Jawa Tengah"
+  skNotarisNo               String? // Nomor SK pengangkatan
+  skNotarisDate             String?
+  offlineLicensingEnabledAt DateTime?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
   users                User[]
   subscriptions        Subscription[]
+  offlineLicenses      OfflineLicense[]
   clients              Client[]
   pekerjaan            Pekerjaan[]
   invoices             Invoice[]
@@ -39,6 +41,7 @@ model Office {
   checklistItems       PekerjaanChecklistItem[]
   checklistAttachments PekerjaanChecklistAttachment[]
   payments             Payment[]
+  landObjects          PekerjaanLandObject[]
   sequences            OfficeSequence[]
 }
 
@@ -104,6 +107,7 @@ enum AuditAction {
   INVOICE_VOID
   PAYMENT_CREATE
   PAYMENT_VOID
+  LICENSE_IMPORT
 }
 
 enum AuditTargetType {
@@ -115,6 +119,7 @@ enum AuditTargetType {
   REMINDER
   INVOICE
   PAYMENT
+  OFFLINE_LICENSE
 }
 
 model AuditLog {
@@ -162,6 +167,39 @@ model Subscription {
   updatedAt        DateTime           @updatedAt
 
   @@index([officeId, status])
+}
+
+enum OfflineLicenseType {
+  SUBSCRIPTION
+  PERPETUAL
+}
+
+model SystemInstallation {
+  id             String   @id @default("singleton")
+  installationId String   @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model OfflineLicense {
+  id              String             @id @default(cuid())
+  officeId        String
+  office          Office             @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  installationId  String
+  licenseId       String             @unique
+  sequence        Int
+  type            OfflineLicenseType
+  plan            SubscriptionPlan
+  issuedAt        DateTime
+  validUntil      DateTime?
+  gracePeriodDays Int                @default(0)
+  payload         String             @db.Text
+  signature       String             @db.Text
+  importedAt      DateTime           @default(now())
+  importedById    String?
+
+  @@unique([officeId, sequence])
+  @@index([officeId, sequence(sort: Desc)])
 }
 
 // ===== Klien =====
@@ -221,6 +259,16 @@ enum PekerjaanPriority {
   TINGGI
 }
 
+enum DossierStage {
+  PENGUMPULAN_DATA
+  PENYUSUNAN_DRAFT
+  SIAP_TANDA_TANGAN
+  SUDAH_TANDA_TANGAN
+  PROSES_INSTANSI
+  SELESAI
+  DIBATALKAN
+}
+
 enum ChecklistItemStatus {
   KOSONG
   TERLAMPIR
@@ -230,22 +278,25 @@ enum ChecklistItemStatus {
 }
 
 model Pekerjaan {
-  id            String            @id @default(cuid())
-  officeId      String
-  office        Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  kind          PekerjaanKind
-  jenis         String // mis. "Akta Jual Beli", "SKMHT", "Legalisasi"
-  nomorAkta     String?
-  tanggalAkta   DateTime?
-  judul         String // ringkasan, mis. "AJB - Budi Santoso ke Ani K"
-  status        PekerjaanStatus   @default(MASUK)
-  keterangan    String?
-  picId         String?
-  pic           User?             @relation("PekerjaanPic", fields: [picId], references: [id], onDelete: SetNull)
-  dueDate       DateTime?         @db.Date
-  priority      PekerjaanPriority @default(NORMAL)
-  internalNotes String?           @db.Text
-  completedAt   DateTime?
+  id                 String            @id @default(cuid())
+  officeId           String
+  office             Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  kind               PekerjaanKind
+  jenis              String // mis. "Akta Jual Beli", "SKMHT", "Legalisasi"
+  nomorAkta          String?
+  tanggalAkta        DateTime?
+  judul              String // ringkasan, mis. "AJB - Budi Santoso ke Ani K"
+  status             PekerjaanStatus   @default(MASUK)
+  keterangan         String?
+  picId              String?
+  pic                User?             @relation("PekerjaanPic", fields: [picId], references: [id], onDelete: SetNull)
+  dueDate            DateTime?         @db.Date
+  priority           PekerjaanPriority @default(NORMAL)
+  internalNotes      String?           @db.Text
+  completedAt        DateTime?
+  dossierStage       DossierStage      @default(PENGUMPULAN_DATA)
+  signingScheduledAt DateTime?
+  signingLocation    String?
 
   // Data laporan PPAT (opsional, untuk laporan bulanan ATR/BPN)
   bentukHukum    String? // JB, HB, APHT, dst.
@@ -270,6 +321,7 @@ model Pekerjaan {
   documents      GeneratedDoc[]
   archives       DocumentArchive[]
   checklistItems PekerjaanChecklistItem[]
+  landObjects    PekerjaanLandObject[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -279,6 +331,28 @@ model Pekerjaan {
   @@index([officeId, status, dueDate])
   @@index([officeId, picId, status])
   @@index([officeId, priority, status])
+  @@index([officeId, dossierStage, signingScheduledAt])
+}
+
+model PekerjaanLandObject {
+  id                String    @id @default(cuid())
+  officeId          String
+  office            Office    @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  pekerjaanId       String
+  pekerjaan         Pekerjaan @relation(fields: [pekerjaanId], references: [id], onDelete: Cascade)
+  label             String?
+  hakType           String?
+  certificateNumber String?
+  nib               String?
+  nop               String?
+  address           String?   @db.Text
+  luasTanah         Decimal?  @db.Decimal(12, 2)
+  luasBangunan      Decimal?  @db.Decimal(12, 2)
+  sortOrder         Int       @default(0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([officeId, pekerjaanId, sortOrder])
 }
 
 model ChecklistTemplate {
@@ -367,6 +441,7 @@ model PekerjaanClient {
   clientId    String
   client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
   peran       String // mis. "Penjual", "Pembeli", "Pemberi Kuasa", "Debitor"
+  capacity    String?
 
   @@unique([pekerjaanId, clientId, peran])
 }

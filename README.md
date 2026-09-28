@@ -65,6 +65,31 @@ Pengembangan lanjutan dari [skmht-generator](https://github.com/Errs404/skmht-ge
 - File template `.docx` dan dokumen hasil generate disimpan di `storage/` — **tidak dipush ke Git** karena berisi data klien (NIK, alamat, dsb).
 - `.env` tidak dipush; gunakan `.env.example` sebagai acuan.
 
+### Lisensi offline
+
+- Sinotaris mendukung lisensi sewa dan bayar putus melalui file `.slic` bertanda tangan Ed25519.
+- Instalasi pelanggan hanya membawa public key yang dipasang di `src/lib/licenseTrust.ts`. Private key hanya boleh berada pada mesin penerbit milik vendor.
+- Sebelum distribusi komersial, buat key vendor di luar repository:
+
+  ```powershell
+  $env:LICENSE_KEY_PASSPHRASE="PASSPHRASE_PANJANG_DAN_UNIK"
+  npm run license:keygen -- --private-out "D:\sinotaris-vendor-secrets\license-private.pem"
+  ```
+
+  Salin public key yang ditampilkan ke `src/lib/licenseTrust.ts`, rebuild aplikasi, lalu simpan private key terenkripsi dan passphrase secara terpisah. Jangan gunakan public key contoh bawaan untuk distribusi pelanggan.
+
+- Pelanggan mengunduh `.sreq` dari **Pengaturan → Aktivasi Lisensi Offline**. Terbitkan lisensinya pada mesin vendor:
+
+  ```powershell
+  $env:LICENSE_KEY_PASSPHRASE="PASSPHRASE_KEY_VENDOR"
+  npm run license:issue -- --private-key "D:\sinotaris-vendor-secrets\license-private.pem" --request ".\pelanggan.sreq" --type SUBSCRIPTION --months 12 --plan PRO --grace-days 7 --output ".\pelanggan.slic"
+  ```
+
+  Untuk bayar putus, gunakan `--type PERPETUAL` tanpa `--months`.
+
+- Setelah lisensi offline pertama diimpor, kantor tersebut tidak kembali memakai tabel langganan lama. Lisensi sewa yang melewati masa tenggang masuk mode baca saja; lisensi perpetual tetap aktif tanpa tanggal kedaluwarsa.
+- MVP ini mengikat lisensi ke Installation ID database. Hardware binding, deteksi rollback jam, dan pemindahan lisensi otomatis belum termasuk dan perlu ditambahkan sebelum perlindungan anti-cloning tingkat lanjut.
+
 ### Pemindai & Arsip Dokumen (lokal/offline)
 
 - Mendukung PDF digital, DOCX, JPG, PNG, dan WEBP (maksimal 15 MB).

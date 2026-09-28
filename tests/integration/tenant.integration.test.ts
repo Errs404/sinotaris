@@ -132,7 +132,83 @@ test("createPekerjaanForActor creates exact same-office relations and one safe a
       picId: fixture.actorA.id,
       dueDate: null,
       partyCount: 2,
+      landObjectCount: 0,
     });
+  });
+});
+
+test("dossier MVP stores party capacity, multiple PPAT land objects, schedule, and safe audit", async () => {
+  await inRollbackTransaction(async (tx) => {
+    const fixture = await createTenantFixtures(tx);
+    const buyer = await tx.client.create({ data: { officeId: fixture.officeA.id, name: "Buyer Dossier" } });
+    const signing = new Date("2026-09-01T03:00:00.000Z");
+    const pekerjaan = await createPekerjaanForActor(tx, fixture.actorA, {
+      kind: "PPAT", jenis: "Akta Jual Beli", judul: "Dossier PPAT",
+      dossierStage: "PENYUSUNAN_DRAFT", signingScheduledAt: signing, signingLocation: "Kantor Notaris",
+    }, [
+      { clientId: fixture.clientA.id, peran: "Penjual", capacity: "Bertindak untuk diri sendiri" },
+      { clientId: buyer.id, peran: "Pembeli", capacity: "Berdasarkan kuasa" },
+    ], [
+      { label: "Bidang A", hakType: "Hak Milik", certificateNumber: "SHM-001", luasTanah: 120 },
+      { label: "Bidang B", nib: "NIB-002", nop: "NOP-002", address: "Lokasi kedua", luasBangunan: 45.5 },
+    ]);
+
+    const stored = await tx.pekerjaan.findUniqueOrThrow({
+      where: { id: pekerjaan.id },
+      include: { clients: { orderBy: { peran: "asc" } }, landObjects: { orderBy: { sortOrder: "asc" } } },
+    });
+    assert.equal(stored.dossierStage, "PENYUSUNAN_DRAFT");
+    assert.equal(stored.signingScheduledAt?.toISOString(), signing.toISOString());
+    assert.equal(stored.signingLocation, "Kantor Notaris");
+    assert.equal(stored.luasTanah?.toString(), "120");
+    assert.deepEqual(stored.clients.map(({ peran, capacity }) => ({ peran, capacity })), [
+      { peran: "Pembeli", capacity: "Berdasarkan kuasa" },
+      { peran: "Penjual", capacity: "Bertindak untuk diri sendiri" },
+    ]);
+    assert.deepEqual(stored.landObjects.map(({ label, sortOrder }) => ({ label, sortOrder })), [
+      { label: "Bidang A", sortOrder: 0 }, { label: "Bidang B", sortOrder: 1 },
+    ]);
+    const audit = await tx.auditLog.findFirstOrThrow({ where: { targetId: pekerjaan.id, action: "PEKERJAAN_CREATE" } });
+    assert.equal((audit.metadata as Record<string, unknown>).landObjectCount, 2);
+    assert.equal(JSON.stringify(audit.metadata).includes("SHM-001"), false);
+    assert.equal(JSON.stringify(audit.metadata).includes("Berdasarkan kuasa"), false);
+  });
+});
+
+test("dossier update replaces owned land objects, audits changed field names, and rejects objects on Notaris work", async () => {
+  await inRollbackTransaction(async (tx) => {
+    const fixture = await createTenantFixtures(tx);
+    const parties = [{ clientId: fixture.clientA.id, peran: "Pihak", capacity: "Pribadi" }];
+    const ppat = await createPekerjaanForActor(tx, fixture.actorA, {
+      kind: "PPAT", jenis: "Test PPAT", judul: "Sebelum dossier update",
+    }, parties, [{ label: "Lama", luasTanah: 10 }]);
+    const before = await tx.pekerjaan.findUniqueOrThrow({ where: { id: ppat.id } });
+    await updatePekerjaanForActor(tx, fixture.actorA, ppat.id, before.updatedAt, {
+      dossierStage: "SIAP_TANDA_TANGAN", signingLocation: "Lokasi Baru",
+    }, parties, [{ label: "Baru", certificateNumber: "CERT-NEW", luasTanah: 20 }]);
+    const objects = await tx.pekerjaanLandObject.findMany({ where: { pekerjaanId: ppat.id } });
+    assert.equal(objects.length, 1);
+    assert.equal(objects[0].label, "Baru");
+    assert.equal((await tx.pekerjaan.findUniqueOrThrow({ where: { id: ppat.id } })).luasTanah?.toString(), "20");
+    const audits = await tx.auditLog.findMany({ where: { targetId: ppat.id, action: { in: ["PEKERJAAN_UPDATE", "PEKERJAAN_WORKFLOW_UPDATE"] } } });
+    const serialized = JSON.stringify(audits.map((audit) => audit.metadata));
+    assert.equal(serialized.includes("landObjects"), true);
+    assert.equal(serialized.includes("dossierStage"), true);
+    assert.equal(serialized.includes("CERT-NEW"), false);
+
+    const notaris = await createPekerjaanForActor(tx, fixture.actorA, { kind: "NOTARIS", jenis: "Akta", judul: "No land" }, []);
+    assert.equal(notaris.kind, "NOTARIS");
+    await assert.rejects(updatePekerjaanForActor(
+      tx, fixture.actorA, notaris.id, (await tx.pekerjaan.findUniqueOrThrow({ where: { id: notaris.id } })).updatedAt,
+      {}, [], [{ label: "Tidak boleh" }],
+    ), /hanya dapat ditambahkan pada pekerjaan PPAT/);
+
+    const latestPpat = await tx.pekerjaan.findUniqueOrThrow({ where: { id: ppat.id } });
+    await updatePekerjaanForActor(tx, fixture.actorA, ppat.id, latestPpat.updatedAt, { kind: "NOTARIS" }, parties, []);
+    const converted = await tx.pekerjaan.findUniqueOrThrow({ where: { id: ppat.id } });
+    assert.equal(converted.kind, "NOTARIS");
+    assert.equal(converted.luasTanah, null);
+    assert.equal(await tx.pekerjaanLandObject.count({ where: { pekerjaanId: ppat.id } }), 0);
   });
 });
 

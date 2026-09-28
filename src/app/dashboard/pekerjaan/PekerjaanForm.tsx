@@ -2,6 +2,7 @@ import { Field, SelectField, TextArea, SubmitButton, inputClass } from "@/compon
 import { dateOnlyInputValue, pekerjaanStatusClass, pekerjaanStatusLabel } from "@/lib/pekerjaanUi";
 import type { PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { PihakEditor, type ClientOption, type PihakValue } from "./PihakEditor";
+import { LandObjectEditor, type LandObjectValue } from "./LandObjectEditor";
 
 type PekerjaanLike = {
   kind?: string | null;
@@ -26,6 +27,9 @@ type PekerjaanLike = {
   priority?: PekerjaanPriority | null;
   internalNotes?: string | null;
   updatedAt?: Date | string | null;
+  dossierStage?: string | null;
+  signingScheduledAt?: Date | string | null;
+  signingLocation?: string | null;
 };
 
 export type PekerjaanUserOption = { id: string; name: string; role: UserRole };
@@ -42,6 +46,7 @@ export function PekerjaanForm({
   parties,
   users,
   currentActorId,
+  landObjects,
 }: {
   action: (formData: FormData) => Promise<void>;
   pekerjaan?: PekerjaanLike;
@@ -52,10 +57,14 @@ export function PekerjaanForm({
   parties?: PihakValue[];
   users: PekerjaanUserOption[];
   currentActorId: string;
+  landObjects?: LandObjectValue[];
 }) {
   const tanggalAkta = dateOnlyInputValue(pekerjaan?.tanggalAkta);
   const dueDate = dateOnlyInputValue(pekerjaan?.dueDate);
   const status = (pekerjaan?.status ?? "MASUK") as PekerjaanStatus;
+  const signingValue = pekerjaan?.signingScheduledAt
+    ? new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(pekerjaan.signingScheduledAt)).replace(" ", "T")
+    : "";
   const selectedPicId = pekerjaan?.picId && users.some((user) => user.id === pekerjaan.picId)
     ? pekerjaan.picId
     : pekerjaan ? "" : currentActorId;
@@ -136,6 +145,15 @@ export function PekerjaanForm({
             ]}
           />
           <Field label="Tanggal Jatuh Tempo" name="dueDate" type="date" defaultValue={dueDate} />
+          <SelectField label="Tahap Dossier" name="dossierStage" defaultValue={pekerjaan?.dossierStage ?? "PENGUMPULAN_DATA"} options={[
+            { value: "PENGUMPULAN_DATA", label: "Pengumpulan Data" }, { value: "PENYUSUNAN_DRAFT", label: "Penyusunan Draft" },
+            { value: "SIAP_TANDA_TANGAN", label: "Siap Tanda Tangan" }, { value: "SUDAH_TANDA_TANGAN", label: "Sudah Tanda Tangan" },
+            { value: "PROSES_INSTANSI", label: "Proses Instansi" },
+            ...(pekerjaan?.dossierStage === "SELESAI" ? [{ value: "SELESAI", label: "Selesai (ubah melalui status)" }] : []),
+            ...(pekerjaan?.dossierStage === "DIBATALKAN" ? [{ value: "DIBATALKAN", label: "Dibatalkan (ubah melalui status)" }] : []),
+          ]} />
+          <Field label="Jadwal Tanda Tangan" name="signingScheduledAt" type="datetime-local" defaultValue={signingValue} />
+          <div className="sm:col-span-2"><Field label="Lokasi Tanda Tangan" name="signingLocation" defaultValue={pekerjaan?.signingLocation} placeholder="Contoh: Kantor Notaris / lokasi yang disepakati" /></div>
           <div className="sm:col-span-2">
             <label htmlFor="internalNotes" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Catatan Internal</label>
             <textarea id="internalNotes" name="internalNotes" rows={4} maxLength={5000} defaultValue={pekerjaan?.internalNotes ?? ""} className={inputClass} />
@@ -145,6 +163,7 @@ export function PekerjaanForm({
       </div>
 
       <PihakEditor clients={clients} initialValues={parties} />
+      <LandObjectEditor initialValues={landObjects} />
 
       <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <h3 className="mb-1 font-semibold text-slate-800 dark:text-slate-100">Data Laporan PPAT</h3>
@@ -153,11 +172,11 @@ export function PekerjaanForm({
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Bentuk Hukum" name="bentukHukum" defaultValue={pekerjaan?.bentukHukum} placeholder="JB, HB, APHT, ..." />
-          <Field label="NOP" name="nop" defaultValue={pekerjaan?.nop} />
+          <input type="hidden" name="nop" value={pekerjaan?.nop ?? ""} />
+          <input type="hidden" name="luasTanah" value={toStr(pekerjaan?.luasTanah)} />
+          <input type="hidden" name="luasBangunan" value={toStr(pekerjaan?.luasBangunan)} />
           <Field label="Pihak yang Mengalihkan" name="pihakAlih" defaultValue={pekerjaan?.pihakAlih} />
           <Field label="Pihak yang Menerima" name="pihakTerima" defaultValue={pekerjaan?.pihakTerima} />
-          <Field label="Luas Tanah (m²)" name="luasTanah" defaultValue={toStr(pekerjaan?.luasTanah)} />
-          <Field label="Luas Bangunan (m²)" name="luasBangunan" defaultValue={toStr(pekerjaan?.luasBangunan)} />
           <Field label="Harga Transaksi (Rp)" name="hargaTransaksi" defaultValue={toStr(pekerjaan?.hargaTransaksi)} />
         </div>
       </div>

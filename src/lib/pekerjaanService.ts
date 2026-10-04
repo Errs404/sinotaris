@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { DossierStage, PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { createAuditLog } from "@/lib/audit";
 import { instantiateChecklistFromMatchingTemplate } from "@/lib/checklistService";
+import { resolveEffectiveProfile, validateJobAppointment } from "@/lib/officeIdentity";
 
 type DbClient = Prisma.TransactionClient;
 
@@ -29,6 +30,7 @@ export interface PekerjaanActor {
 }
 
 export interface PekerjaanWorkflowInput {
+  appointmentId?: string | null;
   picId?: string | null;
   dueDate?: Date | null;
   priority?: PekerjaanPriority;
@@ -62,6 +64,7 @@ export type PekerjaanUpdateInput = Partial<PekerjaanDomainInput> & PekerjaanWork
 
 const WORKFLOW_FIELDS = ["picId", "dueDate", "priority", "internalNotes", "dossierStage", "signingScheduledAt", "signingLocation"] as const;
 const UPDATE_FIELDS = [
+  "appointmentId",
   "kind", "jenis", "judul", "nomorAkta", "tanggalAkta", "keterangan", "bentukHukum",
   "pihakAlih", "pihakTerima", "luasTanah", "luasBangunan", "hargaTransaksi", "nop",
   "bphtb", "pphFinal", "honorarium", ...WORKFLOW_FIELDS,
@@ -186,6 +189,9 @@ export async function createPekerjaanForActor(
     Object.entries(data).filter(([field]) => (UPDATE_FIELDS as readonly string[]).includes(field)),
   ) as PekerjaanCreateInput;
   validateWorkflowInput(createData);
+  const profile = await resolveEffectiveProfile(db, actor.officeId);
+  if (!profile) throw new Error("Profil kantor terbit yang berlaku belum tersedia.");
+  createData.appointmentId = (await validateJobAppointment(db, actor.officeId, createData.kind, createData.appointmentId)).id;
   if (createData.dossierStage && !EDITABLE_DOSSIER_STAGES.includes(createData.dossierStage)) {
     throw new Error("Pekerjaan baru tidak dapat langsung memakai tahap terminal.");
   }
@@ -201,12 +207,13 @@ export async function createPekerjaanForActor(
   const pekerjaan = await db.pekerjaan.create({
     data: {
       ...createData,
+      officeProfileVersionId: profile.id,
       officeId: actor.officeId,
       status: "MASUK",
       completedAt: null,
       picId,
     },
-    select: { id: true, kind: true, jenis: true, status: true, priority: true, picId: true, dueDate: true },
+    select: { id: true, kind: true, jenis: true, status: true, priority: true, picId: true, dueDate: true, appointmentId: true, officeProfileVersionId: true },
   });
   if (parties.length) {
     await db.pekerjaanClient.createMany({
@@ -231,6 +238,8 @@ export async function createPekerjaanForActor(
       dueDate: pekerjaan.dueDate?.toISOString() ?? null,
       partyCount: parties.length,
       landObjectCount: normalizedLandObjects.length,
+      appointmentId: createData.appointmentId,
+      profileVersionId: profile.id,
     },
   });
   return pekerjaan;
@@ -252,7 +261,7 @@ export async function updatePekerjaanForActor(
   const existing = await db.pekerjaan.findFirst({
     where: { id, officeId: actor.officeId },
     select: {
-      id: true, kind: true, jenis: true, judul: true, nomorAkta: true, tanggalAkta: true,
+      id: true, officeProfileVersionId: true, appointmentId: true, kind: true, jenis: true, judul: true, nomorAkta: true, tanggalAkta: true,
       status: true, keterangan: true, bentukHukum: true, pihakAlih: true, pihakTerima: true,
       luasTanah: true, luasBangunan: true, hargaTransaksi: true, nop: true, bphtb: true,
       pphFinal: true, honorarium: true, picId: true, dueDate: true, priority: true,
@@ -263,6 +272,9 @@ export async function updatePekerjaanForActor(
     },
   });
   if (!existing) throw new Error("Pekerjaan tidak ditemukan.");
+  if ((updateData.appointmentId !== undefined && updateData.appointmentId !== existing.appointmentId) || !existing.appointmentId || (updateData.kind && updateData.kind !== existing.kind)) {
+    updateData.appointmentId = (await validateJobAppointment(db, actor.officeId, updateData.kind ?? existing.kind, updateData.appointmentId)).id;
+  }
   if (existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
     throw new Error("Pekerjaan sudah diubah oleh pengguna lain. Muat ulang halaman lalu coba lagi.");
   }
@@ -324,7 +336,7 @@ export async function updatePekerjaanForActor(
 
   const pekerjaan = await db.pekerjaan.findUniqueOrThrow({
     where: { id: existing.id },
-     select: { id: true, kind: true, status: true, priority: true, picId: true, dueDate: true, dossierStage: true, signingScheduledAt: true, signingLocation: true },
+     select: { id: true, officeProfileVersionId: true, appointmentId: true, kind: true, status: true, priority: true, picId: true, dueDate: true, dossierStage: true, signingScheduledAt: true, signingLocation: true },
   });
   const workflowChangedFields = changedFields.filter((field) => (WORKFLOW_FIELDS as readonly string[]).includes(field));
   const domainChangedFields = changedFields.filter((field) => !(WORKFLOW_FIELDS as readonly string[]).includes(field));
@@ -474,7 +486,7 @@ export async function deletePekerjaanForActor(
   });
   const invoices = await db.invoice.updateMany({
     where: { pekerjaanId: existing.id, officeId: actor.officeId },
-    data: { pekerjaanId: null },
+    data: { pekerjaanId: null, version: { increment: 1 } },
   });
   const deleted = await db.pekerjaan.deleteMany({
     where: { id: existing.id, officeId: actor.officeId, updatedAt: expectedUpdatedAt },

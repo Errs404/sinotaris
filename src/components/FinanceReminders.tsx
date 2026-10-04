@@ -1,0 +1,6 @@
+import Link from "next/link";
+import type { FinanceReminder } from "@/lib/reminderEngine";
+import { invoiceDueLabel, invoicePanelClass } from "@/lib/invoiceUi";
+export function FinanceReminders({ reminders, limit }: { reminders: FinanceReminder[]; limit?: number }) {
+  return <section className={`${invoicePanelClass} space-y-3`} aria-labelledby="finance-reminders-title"><h3 id="finance-reminders-title" className="text-lg font-semibold">Tagihan Perlu Ditindaklanjuti</h3><p className="text-sm">Kritis: {reminders.filter((r) => r.severity === "KRITIS").length} · Peringatan: {reminders.filter((r) => r.severity === "PERINGATAN").length}</p>{!reminders.length && <p className="text-sm text-slate-500">Tidak ada tagihan yang memerlukan tindak lanjut.</p>}<ul className="divide-y divide-slate-200 dark:divide-slate-700">{(limit ? reminders.slice(0, limit) : reminders).map((r) => <li key={r.id} className="py-3"><Link href={r.link} className="block rounded-lg focus:ring-2 focus:ring-indigo-500"><span className="text-sm font-semibold">{r.severity === "KRITIS" ? "Kritis" : "Peringatan"} · {r.title}</span><p className="text-sm">{r.clientName} · {invoiceDueLabel(r.dueDate)}</p></Link></li>)}</ul>{limit && reminders.length > limit && <Link href="/dashboard/pengingat" className="text-sm text-indigo-600 underline">Lihat seluruh pengingat</Link>}</section>;
+}

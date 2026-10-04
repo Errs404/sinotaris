@@ -1,0 +1,12 @@
+@media print {
+  @page { size: A4; margin: 16mm; }
+  body { background: white !important; color: black !important; }
+  body * { visibility: hidden; }
+  .invoice-print, .invoice-print * { visibility: visible; }
+  .invoice-print { position: absolute; inset: 0; width: 100%; color: black; background: white; }
+  .invoice-print .print\:hidden { display: none !important; }
+  .invoice-document { border: 0; box-shadow: none; background: white; color: black; padding: 0; }
+  .invoice-print tr { break-inside: avoid; }
+  .invoice-print thead { display: table-header-group; }
+  .invoice-print .overflow-x-auto { overflow: visible; }
+}

@@ -1,0 +1,24 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { findInvoice, invoiceActor, invoiceOptions } from "@/lib/invoiceQueries";
+import { formatInvoiceMoney, invoiceOutstanding, invoicePaymentState, invoiceStatusLabel, paymentStateLabel, paymentMethodLabel, parseInvoiceSnapshot, jakartaToday, invoicePanelClass } from "@/lib/invoiceUi";
+import { InvoiceForm } from "../InvoiceForm";
+import { InvoiceDocument } from "../InvoiceDocument";
+import { LifecycleControls, PaymentForm, VoidControl } from "../InvoiceControls";
+
+export default async function InvoiceDetail({ params }: { params: Promise<{ id: string }> }) {
+  const actor = await invoiceActor(); const { id } = await params; const invoice = await findInvoice(id, actor.officeId); if (!invoice) notFound();
+  const snapshot = parseInvoiceSnapshot(invoice.snapshotJson);
+  const outstanding = invoiceOutstanding(invoice.totalAmount.toString(), invoice.totalPaid.toString());
+  const options = invoice.status === "DRAFT" ? await invoiceOptions(actor.officeId) : null;
+  return <div className="space-y-6"><Link href="/dashboard/invoice" className="text-indigo-600 underline">← Semua invoice</Link><header className="flex flex-wrap justify-between gap-3"><div><h2 className="text-2xl font-bold">{invoice.number ?? "Draft invoice"}</h2><p>{invoiceStatusLabel[invoice.status]} · Dibuat oleh {invoice.createdBy?.name ?? "—"}</p></div>{invoice.status !== "DRAFT" && snapshot && <Link className="text-indigo-600 underline" href={`/dashboard/invoice/${id}/cetak`}>Cetak invoice</Link>}</header>
+    {invoice.status === "VOID" && <p role="status" className="rounded-lg border-2 border-red-600 p-4 font-bold text-red-700">VOID · DIBATALKAN — {invoice.voidReason}</p>}
+    {options && <InvoiceForm key={invoice.version} {...options} initial={{ id, version: invoice.version, clientId: invoice.clientId, pekerjaanId: invoice.pekerjaanId ?? "", dueDate: invoice.dueDate?.toISOString().slice(0, 10) ?? "", notes: invoice.notes ?? "", items: invoice.items.map((i) => ({ category: i.category, desc: i.desc, qty: String(i.qty), unitPrice: i.unitPrice.toFixed(0) })) }} />}
+    <LifecycleControls id={id} version={invoice.version} status={invoice.status} />
+    {invoice.status !== "DRAFT" && (snapshot ? <InvoiceDocument snapshot={snapshot} status={invoice.status} /> : <p role="alert">Snapshot invoice tidak tersedia. Dokumen resmi tidak dapat ditampilkan.</p>)}
+    {invoice.status !== "DRAFT" && <section className={`${invoicePanelClass} space-y-3`}><h3 className="font-semibold">Pembayaran · {paymentStateLabel[invoicePaymentState(invoice.totalAmount.toString(), invoice.totalPaid.toString())]}</h3><p>Dibayar {formatInvoiceMoney(invoice.totalPaid.toString())} dari {formatInvoiceMoney(invoice.totalAmount.toString())}</p><p className="font-bold">Sisa {formatInvoiceMoney(outstanding)}</p>{invoice.totalAmount.greaterThan(0) && <progress aria-label="Persentase tagihan dibayar" className="w-full" max={100} value={invoice.totalPaid.mul(100).div(invoice.totalAmount).toNumber()} />}</section>}
+    {invoice.status === "TERBIT" && outstanding !== "0" && <PaymentForm id={id} version={invoice.version} outstanding={outstanding} today={jakartaToday()} />}
+    {invoice.status !== "DRAFT" && <section className={`${invoicePanelClass} overflow-x-auto`}><h3 className="mb-3 text-lg font-semibold">Riwayat pembayaran</h3>{!invoice.payments.length ? <p>Belum ada pembayaran.</p> : <table className="w-full text-left text-sm"><thead><tr>{["Kwitansi", "Tanggal", "Nominal", "Metode / referensi", "Status / catatan", "Tindakan"].map((h) => <th key={h} scope="col" className="p-2">{h}</th>)}</tr></thead><tbody>{invoice.payments.map((p) => <tr key={p.id} className="border-t border-slate-200 dark:border-slate-700"><td className="p-2"><Link className="text-indigo-600 underline" href={`/dashboard/invoice/${id}/pembayaran/${p.id}/kwitansi`}>{p.receiptNumber}</Link></td><td className="whitespace-nowrap p-2">{p.paidAt.toISOString().slice(0, 10)}</td><td className="whitespace-nowrap p-2">{formatInvoiceMoney(p.amount.toString())}</td><td className="p-2">{paymentMethodLabel[p.method]}<p>{p.reference}</p></td><td className="p-2">{p.status === "AKTIF" ? "Aktif" : "VOID · Dibatalkan"}<p>{p.notes}</p>{p.voidReason && <p>Alasan: {p.voidReason}</p>}</td><td className="min-w-60 p-2">{invoice.status === "TERBIT" && p.status === "AKTIF" && <VoidControl invoiceId={id} paymentId={p.id} version={invoice.version} />}</td></tr>)}</tbody></table>}</section>}
+    {invoice.status === "TERBIT" && <section className={invoicePanelClass}><p className="mb-3 text-sm">Invoice hanya dapat dibatalkan setelah semua pembayaran aktif dibatalkan. Pembatalan bukan pengembalian dana.</p><VoidControl invoiceId={id} version={invoice.version} /></section>}
+  </div>;
+}

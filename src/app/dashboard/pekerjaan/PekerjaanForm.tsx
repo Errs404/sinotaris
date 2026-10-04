@@ -3,8 +3,10 @@ import { dateOnlyInputValue, pekerjaanStatusClass, pekerjaanStatusLabel } from "
 import type { PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { PihakEditor, type ClientOption, type PihakValue } from "./PihakEditor";
 import { LandObjectEditor, type LandObjectValue } from "./LandObjectEditor";
+import { AppointmentSelector, type AppointmentOption } from "./AppointmentSelector";
 
 type PekerjaanLike = {
+  appointmentId?: string | null;
   kind?: string | null;
   jenis?: string | null;
   judul?: string | null;
@@ -47,6 +49,8 @@ export function PekerjaanForm({
   users,
   currentActorId,
   landObjects,
+  appointments = [],
+  defaultAppointmentId,
 }: {
   action: (formData: FormData) => Promise<void>;
   pekerjaan?: PekerjaanLike;
@@ -58,6 +62,8 @@ export function PekerjaanForm({
   users: PekerjaanUserOption[];
   currentActorId: string;
   landObjects?: LandObjectValue[];
+  appointments?: AppointmentOption[];
+  defaultAppointmentId?: string | null;
 }) {
   const tanggalAkta = dateOnlyInputValue(pekerjaan?.tanggalAkta);
   const dueDate = dateOnlyInputValue(pekerjaan?.dueDate);
@@ -77,15 +83,7 @@ export function PekerjaanForm({
       <div className="rounded-xl bg-white p-6 shadow-sm dark:bg-slate-800">
         <h3 className="mb-4 font-semibold text-slate-800 dark:text-slate-100">Data Pekerjaan</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Jabatan"
-            name="kind"
-            defaultValue={pekerjaan?.kind ?? defaultKind}
-            options={[
-              { value: "NOTARIS", label: "Notaris" },
-              { value: "PPAT", label: "PPAT" },
-            ]}
-          />
+          <AppointmentSelector appointments={appointments} defaultKind={pekerjaan?.kind ?? defaultKind} defaultId={pekerjaan?.appointmentId ?? defaultAppointmentId} />
           <Field
             label="Jenis"
             name="jenis"

@@ -11,6 +11,7 @@ import { saveTemplateFile, deleteTemplateFile, readTemplateFile } from "@/lib/st
 import { extractPlaceholders, buildFieldsDefFromPlaceholders } from "@/lib/templateParser";
 import type { TemplateFieldsDef } from "@/lib/templateFields";
 import skmhtFields from "@/data/skmht-fields.json";
+import { requireCurrentActor } from "@/lib/currentActor";
 
 export async function uploadTemplateAction(formData: FormData) {
   const session = await requireSession();
@@ -74,16 +75,16 @@ export async function importSkmhtAction() {
 
 export async function deleteTemplateAction(id: string) {
   const session = await requireSession();
-  await assertWritable(session.user.officeId);
-
-  const template = await prisma.docTemplate.findFirst({
-    where: { id, officeId: session.user.officeId },
-    include: { _count: { select: { documents: true } } },
+  const template = await prisma.$transaction(async (tx) => {
+    const actor = await requireCurrentActor(session.user.id, tx);
+    await assertWritable(actor.officeId, tx);
+    const row = await tx.docTemplate.findFirst({ where: { id, officeId: actor.officeId }, include: { _count: { select: { documents: true } } } });
+    if (!row) return null;
+    if (row._count.documents) throw new Error("Template sudah digunakan. Riwayat dokumen harus dipertahankan; template tidak dapat dihapus.");
+    await tx.docTemplate.delete({ where: { id: row.id } });
+    return row;
   });
   if (!template) return;
-
-  await prisma.generatedDoc.deleteMany({ where: { templateId: template.id } });
-  await prisma.docTemplate.delete({ where: { id: template.id } });
 
   // File bawaan bisa dipakai template lain — hanya hapus file hasil upload
   if (template.fileName !== "skmht-bawaan.docx") {

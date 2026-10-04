@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { PekerjaanStatus } from "@/generated/prisma/enums";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { requireCurrentActor } from "@/lib/currentActor";
 import { safePekerjaanTimelineDescription, type PekerjaanTimelineAction } from "@/lib/pekerjaanUi";
 import { checklistProgress } from "@/lib/checklistUi";
 import { normalizeJenisKey } from "@/lib/checklistService";
@@ -21,13 +22,16 @@ const TIMELINE_ACTIONS = [
 export default async function PekerjaanDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   const { id } = await params;
-  const officeId = session!.user.officeId;
+  const actor = await requireCurrentActor(session!.user.id);
+  const officeId = actor.officeId;
 
   const [pekerjaan, clients, users, auditLogs] = await Promise.all([
     prisma.pekerjaan.findFirst({
       where: { id, officeId },
       select: {
         id: true, kind: true, jenis: true, judul: true, nomorAkta: true, tanggalAkta: true,
+        appointmentId: true,
+        officeProfileVersion: { select: { version: true, officeName: true } },
         status: true, keterangan: true, bentukHukum: true, pihakAlih: true, pihakTerima: true,
         luasTanah: true, luasBangunan: true, hargaTransaksi: true, nop: true, bphtb: true,
         pphFinal: true, honorarium: true, picId: true, dueDate: true, priority: true,
@@ -65,6 +69,7 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
   ]);
 
   if (!pekerjaan) notFound();
+  const appointments = await prisma.notaryAppointment.findMany({ where: { officeId, OR: [{ status: "PUBLISHED" }, ...(pekerjaan.appointmentId ? [{ id: pekerjaan.appointmentId }] : [])] }, orderBy: { version: "desc" } });
 
   const [candidates, matchingTemplate] = await Promise.all([
     prisma.documentArchive.findMany({
@@ -93,7 +98,7 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
     description: safePekerjaanTimelineDescription(
       log.action as PekerjaanTimelineAction,
       log.metadata,
-      session!.user.role,
+      actor.role,
     ),
     createdAt: log.createdAt.toISOString(),
   }));
@@ -110,7 +115,7 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
     hargaTransaksi: pekerjaan.hargaTransaksi?.toString() ?? null,
     bphtb: pekerjaan.bphtb?.toString() ?? null,
     pphFinal: pekerjaan.pphFinal?.toString() ?? null,
-    honorarium: session!.user.role === "NOTARIS" ? pekerjaan.honorarium?.toString() ?? null : undefined,
+    honorarium: actor.role === "NOTARIS" ? pekerjaan.honorarium?.toString() ?? null : undefined,
     clients: pekerjaan.clients.map((party) => ({ clientId: party.clientId, peran: party.peran, capacity: party.capacity ?? "", name: party.client.name })),
     landObjects: pekerjaan.landObjects.map((item) => ({ ...item, label: item.label ?? "", hakType: item.hakType ?? "", certificateNumber: item.certificateNumber ?? "", nib: item.nib ?? "", nop: item.nop ?? "", address: item.address ?? "", luasTanah: item.luasTanah?.toString() ?? "", luasBangunan: item.luasBangunan?.toString() ?? "" })),
   };
@@ -122,12 +127,15 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
   );
 
   return (
+    <>
+    <p className="mb-4 text-sm text-slate-500">Profil kantor: {pekerjaan.officeProfileVersion ? `${pekerjaan.officeProfileVersion.officeName} · v${pekerjaan.officeProfileVersion.version}` : "Belum terikat"}</p>
     <PekerjaanDetailClient
+      appointments={appointments}
       pekerjaan={dto}
-      role={session!.user.role === "NOTARIS" ? "NOTARIS" : "STAF"}
+      role={actor.role === "NOTARIS" ? "NOTARIS" : "STAF"}
       currentActorId={session!.user.id}
       updateAction={updatePekerjaanAction.bind(null, pekerjaan.id)}
-      deleteAction={session!.user.role === "NOTARIS"
+      deleteAction={actor.role === "NOTARIS"
         ? deletePekerjaanAction.bind(null, pekerjaan.id, expectedUpdatedAt)
         : undefined}
       transitionActions={transitionActions}
@@ -148,5 +156,6 @@ export default async function PekerjaanDetailPage({ params }: { params: Promise<
         canApplyTemplate: templateHasMissingItems,
       }}
     />
+    </>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
 interface ConfirmDialogProps {
@@ -29,6 +29,12 @@ function ConfirmDialogContent({
   const titleId = useId();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialogRef.current?.focus();
+    return () => { previous?.focus(); };
+  }, []);
 
   async function confirm() {
     if (pending) return;
@@ -61,6 +67,17 @@ function ConfirmDialogContent({
         aria-label="Tutup dialog"
       />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") { event.preventDefault(); if (!pending) onClose(); }
+          if (event.key !== "Tab") return;
+          const buttons = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+          if (!buttons.length) { event.preventDefault(); return; }
+          const first = buttons[0], last = buttons[buttons.length - 1];
+          if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last.focus(); }
+          else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialogRef.current)) { event.preventDefault(); first.focus(); }
+        }}
         className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-800"
         role="dialog"
         aria-modal="true"

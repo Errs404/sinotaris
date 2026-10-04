@@ -12,7 +12,8 @@ import {
   type DynamicReminder,
   type DynamicReminderSeverity,
 } from "@/lib/reminderEngine";
-import { getDynamicReminders } from "@/lib/reminderService";
+import { getDynamicReminders, getFinanceReminders } from "@/lib/reminderService";
+import { FinanceReminders } from "@/components/FinanceReminders";
 import { createReminderAction, deleteReminderAction, toggleReminderAction } from "./actions";
 
 const PAGE_SIZE = 20;
@@ -56,6 +57,7 @@ export default async function PengingatPage({ searchParams }: { searchParams: Pr
   const session = await auth();
   const actor = await requireCurrentActor(session!.user.id);
   const params = await searchParams;
+  const financeReminders = actor.role === "NOTARIS" ? await getFinanceReminders(prisma, actor) : null;
   const severity = DYNAMIC_REMINDER_SEVERITIES.includes(params.severity as DynamicReminderSeverity)
     ? params.severity as DynamicReminderSeverity : undefined;
   const q = (params.q?.trim() ?? "").slice(0, 120);
@@ -111,6 +113,7 @@ export default async function PengingatPage({ searchParams }: { searchParams: Pr
         <div><h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pengingat</h2><p className="text-xs text-slate-500 dark:text-slate-400">Prioritas pekerjaan otomatis dan pengingat manual kantor.</p></div>
       </div>
 
+      {financeReminders && <FinanceReminders reminders={financeReminders} />}
       <section className="space-y-4" aria-labelledby="automatic-reminders-title">
         <div><h3 id="automatic-reminders-title" className="text-lg font-semibold text-slate-800 dark:text-slate-100">Perhatian Otomatis</h3><p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Dibentuk dari tenggat dan status dokumen wajib. Perhatian akan hilang otomatis ketika kondisi tidak lagi berlaku.</p></div>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

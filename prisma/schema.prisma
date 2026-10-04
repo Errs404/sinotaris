@@ -43,6 +43,9 @@ model Office {
   payments             Payment[]
   landObjects          PekerjaanLandObject[]
   sequences            OfficeSequence[]
+  profileVersions      OfficeProfileVersion[]
+  appointments         NotaryAppointment[]
+  generatedDocuments   GeneratedDoc[]
 }
 
 enum UserRole {
@@ -71,9 +74,24 @@ model User {
   voidedInvoices         Invoice[]                      @relation("InvoiceVoidedBy")
   recordedPayments       Payment[]                      @relation("PaymentRecordedBy")
   voidedPayments         Payment[]                      @relation("PaymentVoidedBy")
+  createdProfiles        OfficeProfileVersion[]         @relation("ProfileCreatedBy")
+  retiredProfiles        OfficeProfileVersion[]         @relation("ProfileRetiredBy")
+  createdAppointments    NotaryAppointment[]            @relation("AppointmentCreatedBy")
+  retiredAppointments    NotaryAppointment[]            @relation("AppointmentRetiredBy")
 }
 
 enum AuditAction {
+  OFFICE_PROFILE_CREATE
+  OFFICE_PROFILE_UPDATE
+  OFFICE_PROFILE_DELETE
+  OFFICE_PROFILE_PUBLISH
+  OFFICE_PROFILE_RETIRE
+  NOTARY_APPOINTMENT_CREATE
+  NOTARY_APPOINTMENT_UPDATE
+  NOTARY_APPOINTMENT_DELETE
+  NOTARY_APPOINTMENT_PUBLISH
+  NOTARY_APPOINTMENT_RETIRE
+  OFFICE_UPDATE
   CLIENT_CREATE
   CLIENT_UPDATE
   CLIENT_DELETE
@@ -111,6 +129,9 @@ enum AuditAction {
 }
 
 enum AuditTargetType {
+  OFFICE_PROFILE
+  NOTARY_APPOINTMENT
+  OFFICE
   CLIENT
   PEKERJAAN
   DOCUMENT_ARCHIVE
@@ -278,25 +299,29 @@ enum ChecklistItemStatus {
 }
 
 model Pekerjaan {
-  id                 String            @id @default(cuid())
-  officeId           String
-  office             Office            @relation(fields: [officeId], references: [id], onDelete: Cascade)
-  kind               PekerjaanKind
-  jenis              String // mis. "Akta Jual Beli", "SKMHT", "Legalisasi"
-  nomorAkta          String?
-  tanggalAkta        DateTime?
-  judul              String // ringkasan, mis. "AJB - Budi Santoso ke Ani K"
-  status             PekerjaanStatus   @default(MASUK)
-  keterangan         String?
-  picId              String?
-  pic                User?             @relation("PekerjaanPic", fields: [picId], references: [id], onDelete: SetNull)
-  dueDate            DateTime?         @db.Date
-  priority           PekerjaanPriority @default(NORMAL)
-  internalNotes      String?           @db.Text
-  completedAt        DateTime?
-  dossierStage       DossierStage      @default(PENGUMPULAN_DATA)
-  signingScheduledAt DateTime?
-  signingLocation    String?
+  officeProfileVersionId String?
+  officeProfileVersion   OfficeProfileVersion? @relation(fields: [officeProfileVersionId], references: [id], onDelete: SetNull)
+  id                     String                @id @default(cuid())
+  appointmentId          String?
+  appointment            NotaryAppointment?    @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  officeId               String
+  office                 Office                @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  kind                   PekerjaanKind
+  jenis                  String // mis. "Akta Jual Beli", "SKMHT", "Legalisasi"
+  nomorAkta              String?
+  tanggalAkta            DateTime?
+  judul                  String // ringkasan, mis. "AJB - Budi Santoso ke Ani K"
+  status                 PekerjaanStatus       @default(MASUK)
+  keterangan             String?
+  picId                  String?
+  pic                    User?                 @relation("PekerjaanPic", fields: [picId], references: [id], onDelete: SetNull)
+  dueDate                DateTime?             @db.Date
+  priority               PekerjaanPriority     @default(NORMAL)
+  internalNotes          String?               @db.Text
+  completedAt            DateTime?
+  dossierStage           DossierStage          @default(PENGUMPULAN_DATA)
+  signingScheduledAt     DateTime?
+  signingLocation        String?
 
   // Data laporan PPAT (opsional, untuk laporan bulanan ATR/BPN)
   bentukHukum    String? // JB, HB, APHT, dst.
@@ -327,6 +352,8 @@ model Pekerjaan {
   updatedAt DateTime @updatedAt
 
   @@index([officeId, kind, status])
+  @@index([appointmentId])
+  @@index([officeProfileVersionId])
   @@index([officeId, tanggalAkta])
   @@index([officeId, status, dueDate])
   @@index([officeId, picId, status])
@@ -509,6 +536,7 @@ model Invoice {
   updatedAt    DateTime      @updatedAt
 
   @@unique([officeId, number])
+  @@index([officeId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([officeId, status, dueDate])
   @@index([officeId, clientId])
   @@index([officeId, pekerjaanId])
@@ -603,21 +631,104 @@ model DocTemplate {
 }
 
 model GeneratedDoc {
-  id               String           @id @default(cuid())
+  id               String             @id @default(cuid())
+  officeId         String
+  office           Office             @relation(fields: [officeId], references: [id], onDelete: Restrict)
+  appointmentId    String?
+  appointment      NotaryAppointment? @relation(fields: [appointmentId], references: [id], onDelete: Restrict)
+  identityJson     Json?
   templateId       String
-  template         DocTemplate      @relation(fields: [templateId], references: [id])
+  template         DocTemplate        @relation(fields: [templateId], references: [id])
   pekerjaanId      String?
-  pekerjaan        Pekerjaan?       @relation(fields: [pekerjaanId], references: [id])
+  pekerjaan        Pekerjaan?         @relation(fields: [pekerjaanId], references: [id])
   archiveId        String?
-  archive          DocumentArchive? @relation(fields: [archiveId], references: [id], onDelete: SetNull)
+  archive          DocumentArchive?   @relation(fields: [archiveId], references: [id], onDelete: SetNull)
   generatedById    String?
-  generatedBy      User?            @relation(fields: [generatedById], references: [id], onDelete: SetNull)
+  generatedBy      User?              @relation(fields: [generatedById], references: [id], onDelete: SetNull)
   fileName         String
   dataJson         Json // snapshot data form saat generate
   templateChecksum String?
   archiveChecksum  String?
   outputChecksum   String?
-  createdAt        DateTime         @default(now())
+  createdAt        DateTime           @default(now())
+
+  @@index([officeId, createdAt])
+  @@index([appointmentId])
+}
+
+enum ConfigVersionStatus {
+  DRAFT
+  PUBLISHED
+  RETIRED
+}
+
+enum NotaryAppointmentKind {
+  NOTARIS
+  PPAT
+  NOTARIS_PENGGANTI
+}
+
+model OfficeProfileVersion {
+  pekerjaan      Pekerjaan[]
+  id             String              @id @default(cuid())
+  officeId       String
+  office         Office              @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  version        Int
+  status         ConfigVersionStatus @default(DRAFT)
+  officeName     String
+  address        String?             @db.Text
+  phone          String?
+  email          String?
+  logoStorageKey String?
+  effectiveFrom  DateTime?           @db.Date
+  effectiveUntil DateTime?           @db.Date
+  publishedAt    DateTime?
+  createdById    String?
+  createdBy      User?               @relation("ProfileCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  retiredAt      DateTime?
+  retiredById    String?
+  retiredBy      User?               @relation("ProfileRetiredBy", fields: [retiredById], references: [id], onDelete: SetNull)
+  retireReason   String?             @db.Text
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@unique([officeId, version])
+  @@index([officeId, status, effectiveFrom, effectiveUntil])
+}
+
+model NotaryAppointment {
+  id             String                @id @default(cuid())
+  officeId       String
+  office         Office                @relation(fields: [officeId], references: [id], onDelete: Cascade)
+  version        Int
+  status         ConfigVersionStatus   @default(DRAFT)
+  kind           NotaryAppointmentKind
+  notaryName     String
+  title          String?
+  workArea       String?
+  decreeNumber   String?
+  decreeDate     DateTime?             @db.Date
+  decreeDateText String?
+  effectiveFrom  DateTime?             @db.Date
+  effectiveUntil DateTime?             @db.Date
+  publishedAt    DateTime?
+  supersedesId   String?
+  supersedes     NotaryAppointment?    @relation("AppointmentSupersedes", fields: [supersedesId], references: [id], onDelete: SetNull)
+  successors     NotaryAppointment[]   @relation("AppointmentSupersedes")
+  createdById    String?
+  createdBy      User?                 @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  retiredAt      DateTime?
+  retiredById    String?
+  retiredBy      User?                 @relation("AppointmentRetiredBy", fields: [retiredById], references: [id], onDelete: SetNull)
+  retireReason   String?               @db.Text
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  pekerjaan      Pekerjaan[]
+  documents      GeneratedDoc[]
+
+  @@unique([officeId, kind, version])
+  @@index([officeId, kind, status, effectiveFrom, effectiveUntil])
+  @@index([supersedesId])
 }
 
 // ===== Pemindai & Arsip Dokumen =====

@@ -5,6 +5,7 @@ import { MobileDrawer } from "@/components/MobileDrawer";
 import { SidebarNav } from "@/components/SidebarNav";
 import { ToastProvider } from "@/components/Toast";
 import { ThemeToggle } from "@/components/ThemeProvider";
+import { requireCurrentActor } from "@/lib/currentActor";
 
 const allNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -27,8 +28,9 @@ export default async function DashboardLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const subscription = await getSubscriptionState(session.user.officeId);
-  const navItems = session.user.role === "NOTARIS"
+  const actor = await requireCurrentActor(session.user.id);
+  const subscription = await getSubscriptionState(actor.officeId);
+  const navItems = actor.role === "NOTARIS"
     ? allNavItems
     : allNavItems.filter((item) => item.href !== "/dashboard/arsip" && item.href !== "/dashboard/invoice");
 
@@ -47,7 +49,7 @@ export default async function DashboardLayout({
           <SidebarNav items={navItems} />
           <div className="border-t border-indigo-100 px-6 py-4 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
             <p className="font-semibold text-slate-700 dark:text-slate-200">{session.user.name}</p>
-            <p>{session.user.role === "NOTARIS" ? "Notaris (Admin)" : "Staf"}</p>
+            <p>{actor.role === "NOTARIS" ? "Notaris (Admin)" : "Staf"}</p>
             <div className="mt-3 flex items-center gap-2">
               <form
                 action={async () => {
@@ -64,11 +66,11 @@ export default async function DashboardLayout({
           </div>
         </aside>
 
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <MobileDrawer
             navItems={navItems}
             userName={session.user.name}
-            userRole={session.user.role}
+            userRole={actor.role}
           />
           {subscription.readOnly && (
             <div className="bg-amber-500 px-6 py-2 text-center text-sm font-medium text-white">

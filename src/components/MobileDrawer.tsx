@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { SidebarNav, type NavItem } from "@/components/SidebarNav";
@@ -18,6 +18,28 @@ export function MobileDrawer({
   userRole,
 }: MobileDrawerProps) {
   const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => Array.from(panel.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]',
+    ) ?? []).filter((element) => element.getClientRects().length > 0);
+    focusable()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); setOpen(false); }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      const first = items[0], last = items[items.length - 1];
+      if (!first) { event.preventDefault(); panel.current?.focus(); return; }
+      if (!panel.current?.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
+        event.preventDefault(); (event.shiftKey ? last : first).focus();
+      } else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => { document.removeEventListener("keydown", keydown); previous?.focus(); };
+  }, [open]);
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";
@@ -50,14 +72,15 @@ export function MobileDrawer({
       </header>
 
       {open && (
-        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-modal="true" aria-label="Menu navigasi">
           <button
             type="button"
             className="absolute inset-0 bg-slate-950/50"
             onClick={() => setOpen(false)}
             aria-label="Tutup menu navigasi"
+            tabIndex={-1}
           />
-          <aside className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-indigo-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
+          <aside ref={panel} tabIndex={-1} className="relative flex h-full w-72 max-w-[85vw] flex-col border-r border-indigo-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-start justify-between border-b border-indigo-100 px-6 py-5 dark:border-slate-700">
               <div>
                 <h1 className="text-xl font-extrabold tracking-tight text-indigo-700 dark:text-indigo-400">

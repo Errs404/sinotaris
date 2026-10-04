@@ -4,6 +4,7 @@ import { createAuditLog } from "@/lib/audit";
 import type { CurrentActor } from "@/lib/currentActor";
 import { indonesiaTodayDateOnly } from "@/lib/pekerjaanUi";
 import { multiplyRupiah, parseRupiah, serializeRupiah, sumRupiah } from "@/lib/money";
+import { resolveDocumentIdentity } from "@/lib/officeIdentity";
 
 export type DbClient = Prisma.TransactionClient;
 export type InvoiceReadDb = PrismaClient | Prisma.TransactionClient;
@@ -132,12 +133,11 @@ async function lockInvoice(db: DbClient, actor: CurrentActor, id: string) {
 
 async function allocateSequence(db: DbClient, officeId: string, prefix: "INVOICE" | "RECEIPT", year: number) {
   const key = `${prefix}:${year}`;
-  await db.officeSequence.upsert({
-    where: { officeId_key: { officeId, key } }, create: { officeId, key, lastValue: 0 }, update: {},
-  });
   const rows = await db.$queryRaw<Array<{ lastValue: number }>>(Prisma.sql`
-    UPDATE "OfficeSequence" SET "lastValue" = "lastValue" + 1
-    WHERE "officeId" = ${officeId} AND "key" = ${key}
+    INSERT INTO "OfficeSequence" ("officeId", "key", "lastValue")
+    VALUES (${officeId}, ${key}, 1)
+    ON CONFLICT ("officeId", "key") DO UPDATE
+    SET "lastValue" = "OfficeSequence"."lastValue" + 1
     RETURNING "lastValue"
   `);
   return rows[0].lastValue;
@@ -220,11 +220,16 @@ export async function issueInvoice(db: DbClient, actor: CurrentActor, id: string
   if (invoice.status !== "DRAFT") throw new Error("Hanya tagihan draft yang dapat diterbitkan.");
   if (invoice.version !== expectedVersion) throw new Error(STALE);
   if (!invoice.items.length || !invoice.totalAmount.greaterThan(0)) throw new Error("Tagihan harus memiliki item dan total lebih dari nol sebelum diterbitkan.");
+  if (invoice.dueDate && invoice.dueDate < indonesiaTodayDateOnly(now)) {
+    throw new Error("Tanggal jatuh tempo tidak boleh sebelum tanggal terbit di Jakarta.");
+  }
   const { year } = jakartaParts(now);
   const sequence = await allocateSequence(db, actor.officeId, "INVOICE", year);
   const number = `INV/${year}/${String(sequence).padStart(4, "0")}`;
+  const identity = invoice.pekerjaanId ? await resolveDocumentIdentity(db, actor.officeId, invoice.pekerjaanId, now) : null;
   const snapshot = {
-    office: invoice.office,
+    office: identity ? { name: identity.profile.officeName, address: identity.profile.address, phone: identity.profile.phone } : invoice.office,
+    ...(identity ? { identity: { ...identity } } : {}),
     client: invoice.client,
     pekerjaan: invoice.pekerjaan,
     items: invoice.items.map((item) => ({ category: item.category, desc: item.desc, qty: item.qty,
@@ -252,9 +257,19 @@ export async function createPayment(db: DbClient, actor: CurrentActor, invoiceId
   if (!amount.greaterThan(0)) throw new Error("Nominal pembayaran harus lebih dari nol.");
   const paidAt = dateOnly(input.paidAt, "Tanggal efektif pembayaran")!;
   const invoice = await lockInvoice(db, actor, invoiceId);
-  await db.$queryRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.officeId}:${input.requestKey}`}, 0))`);
-  const duplicate = await db.payment.findFirst({ where: { officeId: actor.officeId, requestKey: input.requestKey }, select: { id: true } });
-  if (duplicate) throw new Error("Permintaan pembayaran ini sudah pernah diproses.");
+  await db.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${actor.officeId}:${input.requestKey}`}, 0))`);
+  const reference = optionalText(input.reference, "Referensi", 200);
+  const notes = optionalText(input.notes, "Catatan pembayaran", 2000);
+  const duplicate = await db.payment.findFirst({ where: { officeId: actor.officeId, requestKey: input.requestKey } });
+  if (duplicate) {
+    if (duplicate.invoiceId !== invoiceId || !duplicate.amount.equals(amount)
+      || duplicate.paidAt.getTime() !== paidAt.getTime() || duplicate.method !== input.method
+      || duplicate.reference !== reference || duplicate.notes !== notes) {
+      throw new Error("Kunci permintaan pembayaran sudah digunakan untuk data pembayaran yang berbeda.");
+    }
+    return { id: duplicate.id, receiptNumber: duplicate.receiptNumber, invoiceVersion: invoice.version,
+      paymentState: derivePaymentState(invoice.totalAmount, invoice.totalPaid), replayed: true };
+  }
   if (invoice.status !== "TERBIT") throw new Error("Pembayaran hanya dapat dicatat untuk tagihan terbit.");
   if (invoice.version !== expectedVersion) throw new Error(STALE);
   const paidDate = paidAt.toISOString().slice(0, 10);
@@ -273,15 +288,15 @@ export async function createPayment(db: DbClient, actor: CurrentActor, invoiceId
   const receiptNumber = `KWT/${year}/${String(sequence).padStart(4, "0")}`;
   const payment = await db.payment.create({ data: {
     officeId: actor.officeId, invoiceId, amount, paidAt, method: input.method, receiptNumber,
-    requestKey: input.requestKey, reference: optionalText(input.reference, "Referensi", 200),
-    notes: optionalText(input.notes, "Catatan pembayaran", 2000), recordedById: actor.id,
+    requestKey: input.requestKey, reference,
+    notes, recordedById: actor.id,
   }, select: { id: true } });
   const totalPaid = reconciled.plus(amount);
   await db.invoice.update({ where: { id: invoiceId }, data: { totalPaid, version: { increment: 1 } } });
   await createAuditLog(db, { officeId: actor.officeId, actorId: actor.id, action: "PAYMENT_CREATE", targetType: "PAYMENT", targetId: payment.id,
     metadata: { invoiceId, method: input.method, completed: totalPaid.equals(invoice.totalAmount) },
   });
-  return { id: payment.id, receiptNumber, invoiceVersion: expectedVersion + 1, paymentState: derivePaymentState(invoice.totalAmount, totalPaid) };
+  return { id: payment.id, receiptNumber, invoiceVersion: expectedVersion + 1, paymentState: derivePaymentState(invoice.totalAmount, totalPaid), replayed: false };
 }
 
 export async function voidPayment(db: DbClient, actor: CurrentActor, invoiceId: string, paymentId: string, expectedInvoiceVersion: number, reason: string, now = new Date()) {

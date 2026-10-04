@@ -123,6 +123,8 @@ export APP_MIGRATE_IMAGE_TAG="sinotaris-migrate:$SHORT_SHA"
 
 echo "Building immutable local image tags for git $GIT_SHA..."
 compose build migrate app
+compose up -d --wait db
+sh "$SCRIPT_DIR/scripts/preflight-invoice-migration.sh"
 echo "Applying forward-only Prisma migrations..."
 compose up --no-build --abort-on-container-exit --exit-code-from migrate migrate
 

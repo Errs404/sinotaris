@@ -12,10 +12,14 @@ export function GeneratorForm({
   sections,
   jobs,
   archives,
+  identityLockedFields = [],
+  defaultIdentityValues = {},
 }: {
   templateId: string;
   sections: TemplateFieldsDef;
-  jobs: Array<{ id: string; label: string; values: Record<string, string> }>;
+  jobs: Array<{ id: string; label: string; values: Record<string, string>; identitySource?: string }>;
+  identityLockedFields?: string[];
+  defaultIdentityValues?: Record<string, string>;
   archives: Array<{ id: string; label: string; values: Record<string, string> }>;
 }) {
   // State semua nilai field, diawali default
@@ -26,8 +30,8 @@ export function GeneratorForm({
         values[field.name] = field.default ?? "";
       }
     }
-    return values;
-  }, [sections]);
+    return { ...values, ...defaultIdentityValues };
+  }, [sections, defaultIdentityValues]);
 
   const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -74,7 +78,7 @@ export function GeneratorForm({
       setValues(initial);
       return;
     }
-    setValues(applyAutomaticValues({ ...initial, ...archive.values }));
+    setValues(applyAutomaticValues({ ...initial, ...archive.values, ...defaultIdentityValues }));
   }
 
   function setValue(name: string, value: string) {
@@ -198,11 +202,12 @@ export function GeneratorForm({
                   id={field.name}
                   type={field.type === "date" ? "date" : "text"}
                   value={values[field.name] ?? ""}
-                  readOnly={field.type === "readonly"}
+                  readOnly={field.type === "readonly" || identityLockedFields.includes(field.name)}
                   onChange={(e) => setValue(field.name, e.target.value)}
                   placeholder={field.placeholder}
                   className={`${inputClass} ${field.type === "readonly" ? "bg-slate-50 text-slate-500 dark:bg-slate-700 dark:text-slate-400" : ""}`}
                 />
+                {identityLockedFields.includes(field.name) && <p className="mt-1 text-xs text-slate-500">Identitas terkunci · {jobs.find(job => job.id === pekerjaanId)?.identitySource ?? "Profil dan pengangkatan efektif hari ini"}. Diverifikasi ulang oleh server saat generate.</p>}
               </div>
             ))}
           </div>

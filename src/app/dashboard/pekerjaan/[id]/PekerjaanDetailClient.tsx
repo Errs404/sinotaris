@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import type { AppointmentOption } from "../AppointmentSelector";
+import { identityPeriod } from "@/lib/officeIdentityUi";
 import { useRouter } from "next/navigation";
 import type { DossierStage, PekerjaanKind, PekerjaanPriority, PekerjaanStatus, UserRole } from "@/generated/prisma/enums";
 import { Breadcrumb } from "@/components/Breadcrumb";
@@ -15,6 +17,7 @@ import { PekerjaanTransitionControls } from "./PekerjaanTransitionControls";
 import { PekerjaanChecklistPanel, type ChecklistArchiveDto, type PekerjaanChecklistItemDto } from "./PekerjaanChecklistPanel";
 
 export type PekerjaanDetailDto = {
+  appointmentId: string | null;
   id: string;
   kind: PekerjaanKind;
   jenis: string;
@@ -79,8 +82,10 @@ export function PekerjaanDetailClient({
   users,
   timeline,
   checklist,
+  appointments,
 }: {
   pekerjaan: PekerjaanDetailDto;
+  appointments: AppointmentOption[];
   role: UserRole;
   currentActorId: string;
   updateAction: (formData: FormData) => Promise<void>;
@@ -94,6 +99,7 @@ export function PekerjaanDetailClient({
   const router = useRouter();
   const { toast } = useToast();
   const [showDelete, setShowDelete] = useState(false);
+  const appointment = appointments.find(row => row.id === pekerjaan.appointmentId);
 
   async function handleUpdate(formData: FormData) {
     await updateAction(formData);
@@ -118,6 +124,7 @@ export function PekerjaanDetailClient({
           </span>
           <span className="ml-2 inline-flex rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">{dossierStageLabel[pekerjaan.dossierStage]}</span>
           <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <p>Referensi pengangkatan: {appointment ? `${appointment.notaryName} · ${appointment.kind} · v${appointment.version} · ${appointment.status} · ${identityPeriod(appointment)}` : "Belum ditetapkan"}</p>
             <p>Para pihak: <strong>{pekerjaan.clients.length}</strong>{pekerjaan.kind === "PPAT" && <> · Objek tanah: <strong>{pekerjaan.landObjects.length}</strong></>}</p>
             {pekerjaan.signingScheduledAt && <p>Jadwal tanda tangan: <strong>{new Date(pekerjaan.signingScheduledAt).toLocaleString("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" })}</strong>{pekerjaan.signingLocation ? ` · ${pekerjaan.signingLocation}` : ""}</p>}
           </div>
@@ -138,6 +145,7 @@ export function PekerjaanDetailClient({
       <PekerjaanChecklistPanel pekerjaanId={pekerjaan.id} expectedUpdatedAt={pekerjaan.updatedAt} role={role} {...checklist} />
 
       <PekerjaanForm
+        appointments={appointments}
         action={handleUpdate}
         pekerjaan={pekerjaan}
         isNotaris={role === "NOTARIS"}

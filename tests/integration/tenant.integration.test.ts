@@ -117,6 +117,7 @@ test("createPekerjaanForActor creates exact same-office relations and one safe a
     }, parties);
 
     assert.equal(await tx.pekerjaan.count({ where: { id: pekerjaan.id } }), 1);
+    assert.ok(pekerjaan.appointmentId);
     const relations = await tx.pekerjaanClient.findMany({
       where: { pekerjaanId: pekerjaan.id },
       orderBy: { peran: "asc" },
@@ -132,6 +133,8 @@ test("createPekerjaanForActor creates exact same-office relations and one safe a
       picId: fixture.actorA.id,
       dueDate: null,
       partyCount: 2,
+      appointmentId: pekerjaan.appointmentId,
+      profileVersionId: pekerjaan.officeProfileVersionId,
       landObjectCount: 0,
     });
   });
@@ -406,6 +409,9 @@ test("workflow update audits safe metadata, preserves parties, and true no-op cr
       priority: "TINGGI",
       picId: staffA.id,
       dueDate: "2026-08-20T00:00:00.000Z",
+      dossierStage: "PENGUMPULAN_DATA",
+      hasSigningLocation: false,
+      signingScheduledAt: null,
     });
     assert.equal(JSON.stringify(workflowAudit.metadata).includes(noteSentinel), false);
     assert.equal(await tx.auditLog.count({ where: { targetId: pekerjaan.id, action: "PEKERJAAN_UPDATE" } }), 0);
@@ -464,6 +470,7 @@ test("status transitions enforce graph, Staff restrictions, completedAt, Notaris
     assert.equal(audits.length, 4);
     assert.deepEqual(audits.at(-1)?.metadata, {
       previousStatus: "SELESAI", newStatus: "PROSES", completedAtSet: false,
+      dossierStage: "PENYUSUNAN_DRAFT",
     });
   });
 });

@@ -56,7 +56,7 @@ function parseDraft(formData: FormData): InvoiceDraftInput {
 
 function revalidateInvoice(id?: string) {
   revalidatePath("/dashboard/invoice");
-  if (id) revalidatePath(`/dashboard/invoice/${id}`);
+  if (id) revalidatePath(`/dashboard/invoice/${id}`, "layout");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/pengingat");
 }

@@ -5,6 +5,12 @@ export async function createTenantFixtures(tx: Prisma.TransactionClient) {
   const suffix = randomUUID();
   const officeA = await tx.office.create({ data: { name: `Test Office A ${suffix}`, notarisName: "Test Notaris A" } });
   const officeB = await tx.office.create({ data: { name: `Test Office B ${suffix}`, notarisName: "Test Notaris B" } });
+  for (const office of [officeA, officeB]) {
+    await tx.officeProfileVersion.create({ data: { officeId: office.id, version: 1, status: "PUBLISHED", officeName: office.name, publishedAt: new Date() } });
+    for (const kind of ["NOTARIS", "PPAT"] as const) {
+      await tx.notaryAppointment.create({ data: { officeId: office.id, kind, version: 1, status: "PUBLISHED", notaryName: office.notarisName, publishedAt: new Date() } });
+    }
+  }
   const actorA = await tx.user.create({
     data: {
       officeId: officeA.id,

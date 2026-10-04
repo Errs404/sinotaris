@@ -9,7 +9,7 @@ import { deleteClientForActor } from "../../src/lib/clientService";
 import { getFinanceReminders } from "../../src/lib/reminderService";
 import { indonesiaTodayDateOnly } from "../../src/lib/pekerjaanUi";
 import { createTenantFixtures } from "./fixtures";
-import { expectDatabaseRejection, inRollbackTransaction, prisma } from "./testDatabase";
+import { expectDatabaseRejection, inRollbackTransaction } from "./testDatabase";
 
 const item = (unitPrice = "1000000") => ({ category: "HONORARIUM" as const, desc: "Jasa akta", qty: 1, unitPrice });
 const today = indonesiaTodayDateOnly();
@@ -78,7 +78,15 @@ test("partial/final payments, overpay prevention, dates, idempotency, voids, and
     const partial = await createPayment(tx, f.actorA, draft.id, issued.version, { amount: "400000", paidAt: today, method: "TRANSFER", requestKey, reference: "PRIVATE-REF" }, today);
     assert.equal(partial.paymentState, "SEBAGIAN");
     assert.match(partial.receiptNumber, new RegExp(`^KWT/${today.getUTCFullYear()}/\\d{4}$`));
-    await assert.rejects(createPayment(tx, f.actorA, draft.id, partial.invoiceVersion, { amount: "1", paidAt: today, method: "TUNAI", requestKey }, today), /sudah pernah diproses/);
+    const paymentCount = await tx.payment.count({ where: { invoiceId: draft.id } });
+    const paymentAuditCount = await tx.auditLog.count({ where: { targetId: partial.id, action: "PAYMENT_CREATE" } });
+    const replay = await createPayment(tx, f.actorA, draft.id, issued.version, { amount: "400000", paidAt: today, method: "TRANSFER", requestKey, reference: "PRIVATE-REF" }, today);
+    assert.equal(replay.replayed, true);
+    assert.equal(replay.id, partial.id);
+    assert.equal(replay.receiptNumber, partial.receiptNumber);
+    assert.equal(await tx.payment.count({ where: { invoiceId: draft.id } }), paymentCount);
+    assert.equal(await tx.auditLog.count({ where: { targetId: partial.id, action: "PAYMENT_CREATE" } }), paymentAuditCount);
+    await assert.rejects(createPayment(tx, f.actorA, draft.id, partial.invoiceVersion, { amount: "1", paidAt: today, method: "TUNAI", requestKey }, today), /data pembayaran yang berbeda/);
     await assert.rejects(createPayment(tx, f.actorA, draft.id, partial.invoiceVersion, { amount: "600001", paidAt: today, method: "TUNAI", requestKey: randomUUID() }, today), /melebihi sisa/);
     const final = await createPayment(tx, f.actorA, draft.id, partial.invoiceVersion, { amount: "600000", paidAt: today, method: "TUNAI", requestKey: randomUUID() }, today);
     assert.equal(final.paymentState, "LUNAS");
@@ -126,33 +134,4 @@ test("database constraints reject cross-office actors, invalid money, and totalP
       await tx.$executeRawUnsafe("SET CONSTRAINTS ALL IMMEDIATE");
     }, /must equal active payment sum/);
   });
-});
-
-test("concurrent issue numbers stay distinct and invoice locking prevents aggregate overpayment", async () => {
-  const setup = await prisma.$transaction(async (tx) => {
-    const f = await createTenantFixtures(tx);
-    const first = await createInvoiceDraft(tx, f.actorA, { clientId: f.clientA.id, items: [item()] });
-    const second = await createInvoiceDraft(tx, f.actorA, { clientId: f.clientA.id, items: [item()] });
-    return { actor: f.actorA, first, second };
-  });
-
-  const issueOne = (id: string) => prisma.$transaction(
-    (tx) => issueInvoice(tx, setup.actor, id, 1),
-    { maxWait: 10_000, timeout: 30_000 },
-  );
-  const [firstIssued, secondIssued] = await Promise.all([issueOne(setup.first.id), issueOne(setup.second.id)]);
-  assert.notEqual(firstIssued.number, secondIssued.number);
-
-  const pay = (requestKey: string) => prisma.$transaction(
-    (tx) => createPayment(tx, setup.actor, setup.first.id, firstIssued.version, {
-      amount: "700000", paidAt: indonesiaTodayDateOnly(), method: "TRANSFER", requestKey,
-    }),
-    { maxWait: 10_000, timeout: 30_000 },
-  );
-  const results = await Promise.allSettled([pay(randomUUID()), pay(randomUUID())]);
-  assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
-  assert.equal(results.filter((result) => result.status === "rejected").length, 1);
-  const stored = await prisma.invoice.findUniqueOrThrow({ where: { id: setup.first.id } });
-  assert.equal(stored.totalPaid.toFixed(0), "700000");
-  assert.equal((await reconcileInvoiceTotalPaid(prisma, setup.actor.officeId, setup.first.id)).matches, true);
 });

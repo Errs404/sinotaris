@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { formatRupiah, monthNames } from "@/lib/indoDate";
+import { monthNames } from "@/lib/indoDate";
+import { invoiceMetrics } from "@/lib/invoiceQueries";
+import { formatInvoiceMoney } from "@/lib/invoiceUi";
+import { FinanceReminders } from "@/components/FinanceReminders";
 import { requireCurrentActor } from "@/lib/currentActor";
-import { getDynamicReminders } from "@/lib/reminderService";
+import { getDynamicReminders, getFinanceReminders } from "@/lib/reminderService";
 import type { DynamicReminder, DynamicReminderSeverity } from "@/lib/reminderEngine";
 import { PekerjaanChart } from "./PekerjaanChart";
 import {
@@ -61,7 +64,7 @@ export default async function DashboardPage() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const activeStatuses = ["MASUK", "PROSES", "TANDA_TANGAN"] as const;
 
-  const [totalKlien, pekerjaanBerjalan, pekerjaanBulanIni, invoiceBelumLunas, pengingatAktif, honorBulanIni,
+  const [totalKlien, pekerjaanBerjalan, pekerjaanBulanIni, finance, pengingatAktif, financeReminders,
     overdueCount, dueTodayCount, highPriorityCount, myCount, actionNeeded, dynamicReminders] =
     await Promise.all([
       prisma.client.count({ where: { officeId } }),
@@ -72,20 +75,15 @@ export default async function DashboardPage() {
         where: { officeId, createdAt: { gte: startOfMonth } },
       }),
       isNotaris
-        ? prisma.invoice.count({
-            where: { officeId, status: "TERBIT", totalPaid: { lt: prisma.invoice.fields.totalAmount } },
-          })
-        : 0,
+        ? invoiceMetrics(officeId, now)
+        : null,
       prisma.reminder.findMany({
         where: { officeId, done: false },
         orderBy: { dueDate: "asc" },
         take: 5,
       }),
       isNotaris
-        ? prisma.pekerjaan.aggregate({
-            where: { officeId, createdAt: { gte: startOfMonth } },
-            _sum: { honorarium: true },
-          })
+        ? getFinanceReminders(prisma, actor, now, { limit: 3 })
         : null,
       prisma.pekerjaan.count({ where: { officeId, ...actorScope, status: { in: [...activeStatuses] }, dueDate: { lt: today } } }),
       prisma.pekerjaan.count({ where: { officeId, ...actorScope, status: { in: [...activeStatuses] }, dueDate: { gte: today, lt: tomorrow } } }),
@@ -129,7 +127,7 @@ export default async function DashboardPage() {
     { label: "Total Klien", value: totalKlien, icon: Users, color: "text-indigo-600 bg-indigo-100" },
     { label: "Pekerjaan Berjalan", value: pekerjaanBerjalan, icon: Briefcase, color: "text-amber-600 bg-amber-100" },
     { label: "Bulan Ini", value: pekerjaanBulanIni, icon: FileText, color: "text-teal-600 bg-teal-100" },
-    ...(isNotaris ? [{ label: "Invoice Belum Lunas", value: invoiceBelumLunas, icon: Receipt, color: "text-rose-600 bg-rose-100" }] : []),
+    ...(finance ? [{ label: "Invoice Lewat Jatuh Tempo", value: finance.overdue, icon: Receipt, color: "text-rose-600 bg-rose-100" }] : []),
   ];
 
   const quickActions = [
@@ -186,19 +184,22 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      {isNotaris && (
+      {finance && (
         <div className="rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-600 to-violet-600 p-5 shadow-lg shadow-indigo-200">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-200">
-              Honorarium Bulan Ini
+              Sisa Tagihan Terbit
             </p>
             <TrendingUp className="h-5 w-5 text-indigo-200" />
           </div>
           <p className="mt-2 text-3xl font-extrabold text-white">
-            {formatRupiah(Number(honorBulanIni?._sum.honorarium ?? 0))}
+            {formatInvoiceMoney(finance.outstanding)}
           </p>
+          <p className="mt-3 text-sm text-white">Pembayaran aktif bulan ini: {formatInvoiceMoney(finance.paidThisMonth)}</p>
+          <Link href="/dashboard/invoice" className="mt-3 inline-block text-sm font-semibold text-white underline">Kelola invoice</Link>
         </div>
       )}
+      {financeReminders && <FinanceReminders reminders={financeReminders} limit={3} />}
 
       <PekerjaanChart data={chartData} />
 

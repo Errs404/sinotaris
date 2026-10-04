@@ -8,6 +8,8 @@ import { formatIndonesianDateText, formatAktaDate, formatDisplayDate } from "@/l
 import { collectDatePairs, type TemplateFieldsDef } from "@/lib/templateFields";
 import crypto from "crypto";
 import { createAuditLog } from "@/lib/audit";
+import { requireCurrentActor } from "@/lib/currentActor";
+import { identityPlaceholders, resolveDocumentIdentity } from "@/lib/officeIdentity";
 
 export async function POST(
   request: NextRequest,
@@ -17,11 +19,13 @@ export async function POST(
     const session = await auth();
     if (!session?.user) return new NextResponse("Belum login.", { status: 401 });
 
-    await assertWritable(session.user.officeId);
+    const result = await prisma.$transaction(async (tx) => {
+    const actor = await requireCurrentActor(session.user.id, tx);
+    await assertWritable(actor.officeId, tx);
 
     const { id } = await params;
-    const template = await prisma.docTemplate.findFirst({
-      where: { id, officeId: session.user.officeId },
+    const template = await tx.docTemplate.findFirst({
+      where: { id, officeId: actor.officeId },
     });
     if (!template) return new NextResponse("Template tidak ditemukan.", { status: 404 });
 
@@ -31,17 +35,17 @@ export async function POST(
     const sections = template.fieldsJson as unknown as TemplateFieldsDef;
 
     if (pekerjaanId) {
-      const ownedJob = await prisma.pekerjaan.findFirst({
-        where: { id: pekerjaanId, officeId: session.user.officeId },
+      const ownedJob = await tx.pekerjaan.findFirst({
+        where: { id: pekerjaanId, officeId: actor.officeId },
         select: { id: true },
       });
       if (!ownedJob) return new NextResponse("Pekerjaan tidak ditemukan.", { status: 404 });
     }
     let archiveChecksum: string | null = null;
     if (archiveId) {
-      if (session.user.role !== "NOTARIS") return new NextResponse("Akses arsip ditolak.", { status: 403 });
-      const ownedArchive = await prisma.documentArchive.findFirst({
-        where: { id: archiveId, officeId: session.user.officeId, status: "DIKONFIRMASI" },
+      if (actor.role !== "NOTARIS") return new NextResponse("Akses arsip ditolak.", { status: 403 });
+      const ownedArchive = await tx.documentArchive.findFirst({
+        where: { id: archiveId, officeId: actor.officeId, status: "DIKONFIRMASI" },
         select: { id: true, checksum: true },
       });
       if (!ownedArchive) return new NextResponse("Arsip tidak ditemukan.", { status: 404 });
@@ -56,6 +60,10 @@ export async function POST(
       }
     }
 
+    const identity = await resolveDocumentIdentity(tx, actor.officeId, pekerjaanId);
+    Object.assign(data, identityPlaceholders(identity));
+    // A caller cannot supply derived decree text independently of the authoritative decree date.
+    data.sk_notaris_tanggal_teks = data.sk_notaris_tanggal ? formatIndonesianDateText(data.sk_notaris_tanggal) : "";
     for (const [dateField, textField] of collectDatePairs(sections)) {
       if (!data[dateField]) continue;
       const text = formatIndonesianDateText(data[dateField]);
@@ -84,13 +92,15 @@ export async function POST(
     );
 
     // Catat riwayat generate
-    await prisma.$transaction(async (tx) => {
       const generatedDoc = await tx.generatedDoc.create({
         data: {
+          officeId: actor.officeId,
+          appointmentId: identity.appointment?.id ?? null,
+          identityJson: { ...identity },
           templateId: template.id,
           pekerjaanId,
           archiveId,
-          generatedById: session.user.id,
+           generatedById: actor.id,
           fileName,
           dataJson: data,
           templateChecksum,
@@ -100,8 +110,8 @@ export async function POST(
         select: { id: true },
       });
       await createAuditLog(tx, {
-        officeId: session.user.officeId,
-        actorId: session.user.id,
+        officeId: actor.officeId,
+        actorId: actor.id,
         action: "GENERATED_DOC_CREATE",
         targetType: "GENERATED_DOC",
         targetId: generatedDoc.id,
@@ -116,8 +126,6 @@ export async function POST(
           mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         },
       });
-    });
-
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type":
@@ -125,6 +133,8 @@ export async function POST(
         "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       },
     });
+    }, { timeout: 20000 });
+    return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return new NextResponse(message, { status: 500 });

@@ -48,6 +48,7 @@ export async function getFinanceReminders(
   db: ReminderDbClient = prisma,
   actor: CurrentActor,
   now = new Date(),
+  options: { limit?: number } = {},
 ) {
   if (actor.role !== "NOTARIS") return [];
   const current = await db.user.findFirst({
@@ -58,6 +59,7 @@ export async function getFinanceReminders(
   const today = indonesiaTodayDateOnly(now);
   const horizon = new Date(today); horizon.setUTCDate(horizon.getUTCDate() + 4);
   const candidates = await db.invoice.findMany({
+    take: Number.isFinite(options.limit) ? Math.min(100, Math.max(1, Math.floor(options.limit!))) : 100,
     where: {
       officeId: actor.officeId,
       status: "TERBIT",
